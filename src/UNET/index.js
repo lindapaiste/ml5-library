@@ -9,10 +9,9 @@ Image Classifier using pre-trained networks
 
 import * as tf from '@tensorflow/tfjs';
 import callCallback from '../utils/callcallback';
-import {
-  array3DToImage
-} from '../utils/imageUtilities';
+import {array3DToImage} from '../utils/imageUtilities';
 import p5Utils from '../utils/p5Utils';
+import {ImageModelArgs} from "../utils/imageModelArgs";
 
 const DEFAULTS = {
   modelPath: 'https://raw.githubusercontent.com/zaidalyafeai/HostedModels/master/unet-128/model.json',
@@ -32,10 +31,8 @@ class UNET {
     this.modelReady = false;
     this.isPredicting = false;
     this.config = {
-      modelPath: typeof options.modelPath !== 'undefined' ? options.modelPath : DEFAULTS.modelPath,
-      imageSize: typeof options.imageSize !== 'undefined' ? options.imageSize : DEFAULTS.imageSize,
-      returnTensors: typeof options.returnTensors !== 'undefined' ? options.returnTensors : DEFAULTS.returnTensors,
-
+      ...DEFAULTS,
+      ...options,
     };
     this.ready = callCallback(this.loadModel(), callback);
   }
@@ -48,26 +45,11 @@ class UNET {
 
   async segment(inputOrCallback, cb) {
     await this.ready;
-    let imgToPredict;
-    let callback = cb;
-
-    if (inputOrCallback instanceof HTMLImageElement ||
-      inputOrCallback instanceof HTMLVideoElement ||
-      inputOrCallback instanceof HTMLCanvasElement ||
-      inputOrCallback instanceof ImageData) {
-      imgToPredict = inputOrCallback;
-    } else if (typeof inputOrCallback === 'object' && (inputOrCallback.elt instanceof HTMLImageElement ||
-        inputOrCallback.elt instanceof HTMLVideoElement ||
-        inputOrCallback.elt instanceof HTMLCanvasElement ||
-        inputOrCallback.elt instanceof ImageData)) {
-      imgToPredict = inputOrCallback.elt;
-    } else if (typeof inputOrCallback === 'function') {
-      imgToPredict = this.video;
-      callback = inputOrCallback;
-    }
+    const {image: imgToPredict, callback} = new ImageModelArgs(inputOrCallback, cb);
     return callCallback(this.segmentInternal(imgToPredict), callback);
   }
 
+  // TODO: move to image utilities
   static dataURLtoBlob(dataurl) {
     const arr = dataurl.split(',');
     const mime = arr[0].match(/:(.*?);/)[1];
@@ -86,8 +68,7 @@ class UNET {
 
   async convertToP5Image(tfBrowserPixelImage){
     const blob1 = await p5Utils.rawToBlob(tfBrowserPixelImage, this.config.imageSize, this.config.imageSize);
-    const p5Image1 = await p5Utils.blobToP5Image(blob1);
-    return p5Image1
+    return p5Utils.blobToP5Image(blob1);
   }
 
   async segmentInternal(imgToPredict) {
@@ -170,6 +151,7 @@ class UNET {
       segmentation.dispose();
     } 
 
+    // TODO: combine with logic in BodyPix
     return {
       segmentation:mask, 
       blob: {
@@ -193,25 +175,7 @@ class UNET {
 }
 
 const uNet = (videoOr, optionsOr, cb) => {
-  let video = null;
-  let options = {};
-  let callback = cb;
-
-  if (videoOr instanceof HTMLVideoElement) {
-    video = videoOr;
-  } else if (typeof videoOr === 'object' && videoOr.elt instanceof HTMLVideoElement) {
-    video = videoOr.elt; // Handle p5.js image
-  } else if (typeof videoOr === 'function') {
-    callback = videoOr;
-  } else if (typeof videoOr === 'object') {
-    options = videoOr;
-  }
-
-  if (typeof optionsOr === 'object') {
-    options = optionsOr;
-  } else if (typeof optionsOr === 'function') {
-    callback = optionsOr;
-  }
+const {video, options, callback} = new ImageModelArgs(videoOr, optionsOr, cb);
   return new UNET(video, options, callback);
 };
 

@@ -15,6 +15,7 @@ import * as darknet from "./darknet";
 import * as doodlenet from "./doodlenet";
 import callCallback from "../utils/callcallback";
 import { imgToTensor } from "../utils/imageUtilities";
+import {ImageModelArgs} from "../utils/imageModelArgs";
 
 const DEFAULTS = {
   mobilenet: {
@@ -226,7 +227,7 @@ class ImageClassifier {
     } else if (!(this.video instanceof HTMLVideoElement)) {
       // Handle unsupported input
       throw new Error(
-        "No input image provided. If you want to classify a video, pass the video element in the constructor. ",
+        "No input image provided. If you want to classify a video, pass the video element in the constructor.",
       );
     }
 
@@ -256,9 +257,6 @@ class ImageClassifier {
 }
 
 const imageClassifier = (modelName, videoOrOptionsOrCallback, optionsOrCallback, cb) => {
-  let video;
-  let options = {};
-  let callback = cb;
 
   let model = modelName;
   if (typeof model !== "string") {
@@ -267,24 +265,7 @@ const imageClassifier = (modelName, videoOrOptionsOrCallback, optionsOrCallback,
     model = modelName.toLowerCase();
   }
 
-  if (videoOrOptionsOrCallback instanceof HTMLVideoElement) {
-    video = videoOrOptionsOrCallback;
-  } else if (
-    typeof videoOrOptionsOrCallback === "object" &&
-    videoOrOptionsOrCallback.elt instanceof HTMLVideoElement
-  ) {
-    video = videoOrOptionsOrCallback.elt; // Handle a p5.js video element
-  } else if (typeof videoOrOptionsOrCallback === "object") {
-    options = videoOrOptionsOrCallback;
-  } else if (typeof videoOrOptionsOrCallback === "function") {
-    callback = videoOrOptionsOrCallback;
-  }
-
-  if (typeof optionsOrCallback === "object") {
-    options = optionsOrCallback;
-  } else if (typeof optionsOrCallback === "function") {
-    callback = optionsOrCallback;
-  }
+  const {video, options, callback} = new ImageModelArgs(videoOrOptionsOrCallback, optionsOrCallback, cb);
 
   const instance = new ImageClassifier(model, video, options, callback);
   return callback ? instance : instance.ready;

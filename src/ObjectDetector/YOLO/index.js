@@ -14,8 +14,8 @@ import Video from './../../utils/Video';
 import {
   imgToTensor,
   isInstanceOfSupportedElement
-} from "./../../utils/imageUtilities";
-import callCallback from './../../utils/callcallback';
+} from "../../utils/imageUtilities";
+import callCallback from '../../utils/callcallback';
 import CLASS_NAMES from './../../utils/COCO_CLASSES';
 import modelLoader from './../../utils/modelLoader';
 

@@ -13,11 +13,21 @@
 
 import * as tf from '@tensorflow/tfjs';
 import * as bp from '@tensorflow-models/body-pix';
-import callCallback from '../utils/callcallback';
+import callCallback, {Callback} from '../utils/callcallback';
 import p5Utils from '../utils/p5Utils';
 import BODYPIX_PALETTE from './BODYPIX_PALETTE';
+import {MobileNetMultiplier, OutputStride} from "@tensorflow-models/body-pix/dist/mobilenet";
+import {ImageModelArgs} from "../utils/imageModelArgs";
 
-const DEFAULTS = {
+interface BodyPixOptions {
+  multiplier: MobileNetMultiplier;
+  outputStride: OutputStride;
+  segmentationThreshold: number;
+  returnTensors: boolean;
+  palette: typeof BODYPIX_PALETTE; //TODO
+}
+
+const DEFAULTS: BodyPixOptions = {
   "multiplier": 0.75,
   "outputStride": 16,
   "segmentationThreshold": 0.5,
@@ -25,33 +35,42 @@ const DEFAULTS = {
   "returnTensors": false,
 }
 
+interface BodyPixMasks<T> {
+  personMask: T;
+  backgroundMask: T;
+  partMask: T;
+}
+
 class BodyPix {
+  video: HTMLVideoElement;
+  config: BodyPixOptions;
+  modelReady: boolean;
+  modelPath: string;
+  model: bp.BodyPix | null;
+  ready: Promise<any>;
+
   /**
-     * Create BodyPix.
-     * @param {HTMLVideoElement} video - An HTMLVideoElement.
-     * @param {object} options - An object with options.
-     * @param {function} callback - A callback to be called when the model is ready.
-     */
-  constructor(video, options, callback) {
+   * Create BodyPix.
+   * @param {HTMLVideoElement} video - An HTMLVideoElement.
+   * @param {object} options - An object with options.
+   * @param {function} callback - A callback to be called when the model is ready.
+   */
+  constructor(video: HTMLVideoElement, options: Partial<BodyPixOptions> = {}, callback: Callback<BodyPix>) {
     this.video = video;
     this.model = null;
     this.modelReady = false;
     this.modelPath = ''
     this.config = {
-      multiplier: options.multiplier || DEFAULTS.multiplier,
-      outputStride: options.outputStride || DEFAULTS.outputStride,
-      segmentationThreshold: options.segmentationThreshold || DEFAULTS.segmentationThreshold,
-      palette: options.palette || DEFAULTS.palette,
-      returnTensors: options.returnTensors || DEFAULTS.returnTensors
+      ...options,
+      ...DEFAULTS
     }
-
     this.ready = callCallback(this.loadModel(), callback);
   }
 
   /**
-     * Load the model and set it to this.model
-     * @return {this} the BodyPix model.
-     */
+   * Load the model and set it to this.model
+   * @return {this} the BodyPix model.
+   */
   async loadModel() {
     this.model = await bp.load(this.config.multiplier);
     this.modelReady = true;
@@ -59,10 +78,10 @@ class BodyPix {
   }
 
   /**
-     * Returns an rgb array
-     * @param {Object} a p5.Color obj
-     * @return {Array} an [r,g,b] array
-     */
+   * Returns an rgb array
+   * @param {Object} a p5.Color obj
+   * @return {Array} an [r,g,b] array
+   */
   /* eslint class-methods-use-this: "off" */
   p5Color2RGB(p5ColorObj) {
     const regExp = /\(([^)]+)\)/;
@@ -72,9 +91,9 @@ class BodyPix {
   }
 
   /**
-     * Returns a p5Image
-     * @param {*} tfBrowserPixelImage 
-     */
+   * Returns a p5Image
+   * @param {*} tfBrowserPixelImage
+   */
   async convertToP5Image(tfBrowserPixelImage, segmentationWidth, segmentationHeight) {
     const blob1 = await p5Utils.rawToBlob(tfBrowserPixelImage, segmentationWidth, segmentationHeight);
     const p5Image1 = await p5Utils.blobToP5Image(blob1);
@@ -82,22 +101,20 @@ class BodyPix {
   }
 
   /**
-     * Returns a bodyPartsSpec object 
-     * @param {Array} an array of [r,g,b] colors
-     * @return {object} an object with the bodyParts by color and id
-     */
+   * Returns a bodyPartsSpec object
+   * @param {Array} an array of [r,g,b] colors
+   * @return {object} an object with the bodyParts by color and id
+   */
   /* eslint class-methods-use-this: "off" */
   bodyPartsSpec(colorOptions) {
     const result = colorOptions !== undefined || Object.keys(colorOptions).length >= 24 ? colorOptions : this.config.palette;
 
-    // Check if we're getting p5 colors, make sure they are rgb 
+    // Check if we're getting p5 colors, make sure they are rgb
     if (p5Utils.checkP5() && result !== undefined && Object.keys(result).length >= 24) {
       // Ensure the p5Color object is an RGB array
       Object.keys(result).forEach(part => {
-        if (result[part].color instanceof window.p5.Color) {
+        if (result[part].color instanceof window.p5?.Color) {
           result[part].color = this.p5Color2RGB(result[part].color);
-        } else {
-          result[part].color = result[part].color;
         }
       });
     }
@@ -106,20 +123,20 @@ class BodyPix {
   }
 
   /**
-     * Segments the image with partSegmentation, return result object
-     * @param {HTMLImageElement | HTMLCanvasElement | object | function | number} imageToSegment - 
-     *    takes any of the following params
-     * @param {object} segmentationOptions - config params for the segmentation
-     *    includes outputStride, segmentationThreshold
-     * @return {Object} a result object with image, raw, bodyParts
-     */
+   * Segments the image with partSegmentation, return result object
+   * @param {HTMLImageElement | HTMLCanvasElement | object | function | number} imgToSegment -
+   *    takes any of the following params
+   * @param {object} segmentationOptions - config params for the segmentation
+   *    includes outputStride, segmentationThreshold
+   * @return {Object} a result object with image, raw, bodyParts
+   */
   async segmentWithPartsInternal(imgToSegment, segmentationOptions) {
     // estimatePartSegmentation
     await this.ready;
     await tf.nextFrame();
 
     if (this.video && this.video.readyState === 0) {
-      await new Promise(resolve => {
+      await new Promise<void>(resolve => {
         this.video.onloadeddata = () => resolve();
       });
     }
@@ -172,7 +189,7 @@ class BodyPix {
       // multiply the segmentation and the inputImage
       maskPersonTensor = tf.cast(maskPersonTensor.add(0.2).sign().relu().mul(normTensor), 'int32')
       maskBackgroundTensor = tf.cast(maskBackgroundTensor.add(0.2).sign().neg().relu().mul(normTensor), 'int32')
-      // TODO: handle removing background 
+      // TODO: handle removing background
       partTensor = tf.cast(partTensor, 'int32')
 
       return {
@@ -186,7 +203,7 @@ class BodyPix {
     const bgMaskPixels = await tf.browser.toPixels(backgroundMask);
     const partMaskPixels = await tf.browser.toPixels(partMask);
 
-    // otherwise, return the pixels 
+    // otherwise, return the pixels
     result.personMask = personMaskPixels;
     result.backgroundMask = bgMaskPixels;
     result.partMask = partMaskPixels;
@@ -214,73 +231,41 @@ class BodyPix {
   }
 
   /**
-     * Segments the image with partSegmentation
-     * @param {HTMLImageElement | HTMLCanvasElement | object | function | number} optionsOrCallback - 
-     *    takes any of the following params
-     * @param {object} configOrCallback - config params for the segmentation
-     *    includes palette, outputStride, segmentationThreshold
-     * @param {function} cb - a callback function that handles the results of the function.
-     * @return {function} a promise or the results of a given callback, cb.
-     */
+   * Segments the image with partSegmentation
+   * @param {HTMLImageElement | HTMLCanvasElement | object | function | number} optionsOrCallback -
+   *    takes any of the following params
+   * @param {object} configOrCallback - config params for the segmentation
+   *    includes palette, outputStride, segmentationThreshold
+   * @param {function} cb - a callback function that handles the results of the function.
+   * @return {function} a promise or the results of a given callback, cb.
+   */
   async segmentWithParts(optionsOrCallback, configOrCallback, cb) {
-    let imgToSegment = this.video;
-    let callback;
-    let segmentationOptions = this.config;
-
-    // Handle the image to predict
-    if (typeof optionsOrCallback === 'function') {
-      imgToSegment = this.video;
-      callback = optionsOrCallback;
-      // clean the following conditional statement up!
-    } else if (optionsOrCallback instanceof HTMLImageElement ||
-            optionsOrCallback instanceof HTMLCanvasElement ||
-            optionsOrCallback instanceof HTMLVideoElement ||
-            optionsOrCallback instanceof ImageData) {
-      imgToSegment = optionsOrCallback;
-    } else if (typeof optionsOrCallback === 'object' && (optionsOrCallback.elt instanceof HTMLImageElement ||
-                optionsOrCallback.elt instanceof HTMLCanvasElement ||
-                optionsOrCallback.elt instanceof ImageData)) {
-      imgToSegment = optionsOrCallback.elt; // Handle p5.js image
-    } else if (typeof optionsOrCallback === 'object' && optionsOrCallback.canvas instanceof HTMLCanvasElement) {
-      imgToSegment = optionsOrCallback.canvas; // Handle p5.js image
-    } else if (typeof optionsOrCallback === 'object' && optionsOrCallback.elt instanceof HTMLVideoElement) {
-      imgToSegment = optionsOrCallback.elt; // Handle p5.js image
-    } else if (!(this.video instanceof HTMLVideoElement)) {
-      // Handle unsupported input
+    const {image, options, callback} = new ImageModelArgs(optionsOrCallback, configOrCallback, cb);
+    const imgToSegment = image || this.video;
+    if ( ! imgToSegment ) { // Handle unsupported input
       throw new Error(
-        'No input image provided. If you want to classify a video, pass the video element in the constructor. ',
+          'No input image provided. If you want to classify a video, pass the video element in the constructor. ',
       );
     }
 
-    if (typeof configOrCallback === 'object') {
-      segmentationOptions = configOrCallback;
-    } else if (typeof configOrCallback === 'function') {
-      callback = configOrCallback;
-    }
-
-    if (typeof cb === 'function') {
-      callback = cb;
-    }
-
-    return callCallback(this.segmentWithPartsInternal(imgToSegment, segmentationOptions), callback);
-
+    return callCallback(this.segmentWithPartsInternal(imgToSegment, options), callback);
   }
 
   /**
-     * Segments the image with personSegmentation, return result object
-     * @param {HTMLImageElement | HTMLCanvasElement | object | function | number} imageToSegment - 
-     *    takes any of the following params
-     * @param {object} segmentationOptions - config params for the segmentation
-     *    includes outputStride, segmentationThreshold
-     * @return {Object} a result object with maskBackground, maskPerson, raw
-     */
+   * Segments the image with personSegmentation, return result object
+   * @param {HTMLImageElement | HTMLCanvasElement | object | function | number} imgToSegment -
+   *    takes any of the following params
+   * @param {object} segmentationOptions - config params for the segmentation
+   *    includes outputStride, segmentationThreshold
+   * @return {Object} a result object with maskBackground, maskPerson, raw
+   */
   async segmentInternal(imgToSegment, segmentationOptions) {
 
     await this.ready;
     await tf.nextFrame();
 
     if (this.video && this.video.readyState === 0) {
-      await new Promise(resolve => {
+      await new Promise<void>(resolve => {
         this.video.onloadeddata = () => resolve();
       });
     }
@@ -352,7 +337,7 @@ class BodyPix {
       result.personMask = await this.convertToP5Image(personMaskPixels, segmentation.width, segmentation.height)
       result.backgroundMask = await this.convertToP5Image(bgMaskPixels, segmentation.width, segmentation.height)
     } else {
-      // otherwise, return the pixels 
+      // otherwise, return the pixels
       result.personMask = personMaskPixels;
       result.backgroundMask = bgMaskPixels;
     }
@@ -371,82 +356,29 @@ class BodyPix {
   }
 
   /**
-     * Segments the image with personSegmentation
-     * @param {HTMLImageElement | HTMLCanvasElement | object | function | number} optionsOrCallback - 
-     *    takes any of the following params
-     * @param {object} configOrCallback - config params for the segmentation
-     *    includes outputStride, segmentationThreshold
-     * @param {function} cb - a callback function that handles the results of the function.
-     * @return {function} a promise or the results of a given callback, cb.
-     */
+   * Segments the image with personSegmentation
+   * @param {HTMLImageElement | HTMLCanvasElement | object | function | number} optionsOrCallback -
+   *    takes any of the following params
+   * @param {object} configOrCallback - config params for the segmentation
+   *    includes outputStride, segmentationThreshold
+   * @param {function} cb - a callback function that handles the results of the function.
+   * @return {function} a promise or the results of a given callback, cb.
+   */
   async segment(optionsOrCallback, configOrCallback, cb) {
-    let imgToSegment = this.video;
-    let callback;
-    let segmentationOptions = this.config;
-
-    // Handle the image to predict
-    if (typeof optionsOrCallback === 'function') {
-      imgToSegment = this.video;
-      callback = optionsOrCallback;
-      // clean the following conditional statement up!
-    } else if (optionsOrCallback instanceof HTMLImageElement ||
-            optionsOrCallback instanceof HTMLCanvasElement ||
-            optionsOrCallback instanceof HTMLVideoElement ||
-            optionsOrCallback instanceof ImageData) {
-      imgToSegment = optionsOrCallback;
-    } else if (typeof optionsOrCallback === 'object' && (optionsOrCallback.elt instanceof HTMLImageElement ||
-                optionsOrCallback.elt instanceof HTMLCanvasElement ||
-                optionsOrCallback.elt instanceof ImageData)) {
-      imgToSegment = optionsOrCallback.elt; // Handle p5.js image
-    } else if (typeof optionsOrCallback === 'object' && optionsOrCallback.canvas instanceof HTMLCanvasElement) {
-      imgToSegment = optionsOrCallback.canvas; // Handle p5.js image
-    } else if (typeof optionsOrCallback === 'object' && optionsOrCallback.elt instanceof HTMLVideoElement) {
-      imgToSegment = optionsOrCallback.elt; // Handle p5.js image
-    } else if (!(this.video instanceof HTMLVideoElement)) {
-      // Handle unsupported input
+    const {image, options, callback} = new ImageModelArgs(optionsOrCallback, configOrCallback, cb);
+    const imgToSegment = image || this.video;
+    if ( ! imgToSegment ) { // Handle unsupported input
       throw new Error(
-        'No input image provided. If you want to classify a video, pass the video element in the constructor. ',
+          'No input image provided. If you want to classify a video, pass the video element in the constructor. ',
       );
     }
-
-    if (typeof configOrCallback === 'object') {
-      segmentationOptions = configOrCallback;
-    } else if (typeof configOrCallback === 'function') {
-      callback = configOrCallback;
-    }
-
-    if (typeof cb === 'function') {
-      callback = cb;
-    }
-
-    return callCallback(this.segmentInternal(imgToSegment, segmentationOptions), callback);
+    return callCallback(this.segmentInternal(imgToSegment, options), callback);
   }
 
 }
 
 const bodyPix = (videoOrOptionsOrCallback, optionsOrCallback, cb) => {
-  let video;
-  let options = {};
-  let callback = cb;
-
-  if (videoOrOptionsOrCallback instanceof HTMLVideoElement) {
-    video = videoOrOptionsOrCallback;
-  } else if (
-    typeof videoOrOptionsOrCallback === 'object' &&
-        videoOrOptionsOrCallback.elt instanceof HTMLVideoElement
-  ) {
-    video = videoOrOptionsOrCallback.elt; // Handle a p5.js video element
-  } else if (typeof videoOrOptionsOrCallback === 'object') {
-    options = videoOrOptionsOrCallback;
-  } else if (typeof videoOrOptionsOrCallback === 'function') {
-    callback = videoOrOptionsOrCallback;
-  }
-
-  if (typeof optionsOrCallback === 'object') {
-    options = optionsOrCallback;
-  } else if (typeof optionsOrCallback === 'function') {
-    callback = optionsOrCallback;
-  }
+  const {video, options, callback} = new ImageModelArgs(videoOrOptionsOrCallback, optionsOrCallback, cb);
 
   const instance = new BodyPix(video, options, callback);
   return callback ? instance : instance.ready;

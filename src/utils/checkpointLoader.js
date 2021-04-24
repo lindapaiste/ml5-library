@@ -10,12 +10,14 @@ const MANIFEST_FILE = 'manifest.json';
 export default class CheckpointLoader {
   constructor(urlPath) {
     this.urlPath = urlPath;
-    if (this.urlPath.charAt(this.urlPath.length - 1) !== '/') {
+    // enforce trailing slash
+    if (! this.urlPath.endsWith('/')) {
       this.urlPath += '/';
     }
   }
 
   async loadManifest() {
+    // TODO: would be less code to use fetch or axios instead of XMLHttpRequest
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('GET', this.urlPath + MANIFEST_FILE);

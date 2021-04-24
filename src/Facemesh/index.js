@@ -15,13 +15,14 @@ import * as tf from "@tensorflow/tfjs";
 import * as facemeshCore from "@tensorflow-models/facemesh";
 import { EventEmitter } from "events";
 import callCallback from "../utils/callcallback";
+import {ImageModelArgs} from "../utils/imageModelArgs";
 
 class Facemesh extends EventEmitter {
   /**
    * Create Facemesh.
-   * @param {HTMLVideoElement} video - An HTMLVideoElement.
-   * @param {object} options - An object with options.
-   * @param {function} callback - A callback to be called when the model is ready.
+   * @param {HTMLVideoElement} [video] - An HTMLVideoElement.
+   * @param {object} [options] - An object with options.
+   * @param {function} [callback] - A callback to be called when the model is ready.
    */
   constructor(video, options, callback) {
     super();
@@ -57,15 +58,17 @@ class Facemesh extends EventEmitter {
 
   /**
    * Load the model and set it to this.model
+   * @param {ImageArg | function} inputOr
+   * @param {function} [callback]
    * @return {this} the Facemesh model.
    */
   async predict(inputOr, callback) {
-    const input = this.getInput(inputOr);
+    const {image} = new ImageModelArgs(inputOr);
     const { flipHorizontal } = this.config;
-    const predictions = await this.model.estimateFaces(input, flipHorizontal);
-    const result = predictions;
+    const result = await this.model.estimateFaces(image, flipHorizontal);
     this.emit("predict", result);
 
+    // TODO: is this right?
     if (this.video) {
       return tf.nextFrame().then(() => this.predict());
     }
@@ -76,57 +79,10 @@ class Facemesh extends EventEmitter {
 
     return result;
   }
-
-  getInput(inputOr) {
-    let input;
-    if (
-      inputOr instanceof HTMLImageElement ||
-      inputOr instanceof HTMLVideoElement ||
-      inputOr instanceof HTMLCanvasElement ||
-      inputOr instanceof ImageData
-    ) {
-      input = inputOr;
-    } else if (
-      typeof inputOr === "object" &&
-      (inputOr.elt instanceof HTMLImageElement ||
-        inputOr.elt instanceof HTMLVideoElement ||
-        inputOr.elt instanceof ImageData)
-    ) {
-      input = inputOr.elt; // Handle p5.js image and video
-    } else if (typeof inputOr === "object" && inputOr.canvas instanceof HTMLCanvasElement) {
-      input = inputOr.canvas; // Handle p5.js image
-    } else {
-      input = this.video;
-    }
-
-    return input;
-  }
 }
 
 const facemesh = (videoOrOptionsOrCallback, optionsOrCallback, cb) => {
-  let video;
-  let options = {};
-  let callback = cb;
-
-  if (videoOrOptionsOrCallback instanceof HTMLVideoElement) {
-    video = videoOrOptionsOrCallback;
-  } else if (
-    typeof videoOrOptionsOrCallback === "object" &&
-    videoOrOptionsOrCallback.elt instanceof HTMLVideoElement
-  ) {
-    video = videoOrOptionsOrCallback.elt; // Handle a p5.js video element
-  } else if (typeof videoOrOptionsOrCallback === "object") {
-    options = videoOrOptionsOrCallback;
-  } else if (typeof videoOrOptionsOrCallback === "function") {
-    callback = videoOrOptionsOrCallback;
-  }
-
-  if (typeof optionsOrCallback === "object") {
-    options = optionsOrCallback;
-  } else if (typeof optionsOrCallback === "function") {
-    callback = optionsOrCallback;
-  }
-
+  const {video, options, callback} = new ImageModelArgs(videoOrOptionsOrCallback, optionsOrCallback, cb);
   const instance = new Facemesh(video, options, callback);
   return callback ? instance : instance.ready;
 };

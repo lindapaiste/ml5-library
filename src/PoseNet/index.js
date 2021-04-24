@@ -12,6 +12,7 @@ import EventEmitter from 'events';
 import * as tf from '@tensorflow/tfjs';
 import * as posenet from '@tensorflow-models/posenet';
 import callCallback from '../utils/callcallback';
+import {ImageModelArgs} from "../utils/imageModelArgs";
 
 
 const DEFAULTS = {
@@ -31,7 +32,7 @@ const DEFAULTS = {
 
 class PoseNet extends EventEmitter {
   /**
-   * @typedef {Object} options
+   * @typedef {Object} PoseNetOptions
    * @property {string} architecture - default 'MobileNetV1',
    * @property {number} inputResolution - default 257,
    * @property {number} outputStride - default 16
@@ -40,31 +41,32 @@ class PoseNet extends EventEmitter {
    * @property {number} maxPoseDetections - default 5
    * @property {number} scoreThreshold - default 0.5
    * @property {number} nmsRadius - default 20
-   * @property {String} detectionType - default single
+   * @property {string} detectionType - default 'single'
    * @property {number} nmsRadius - default 0.75,
    * @property {number} quantBytes - default 2,
-   * @property {string} modelUrl - default null
+   * @property {(string | null)} modelUrl - default null
+   * @property {number} multiplier - default 0.75 (only for MobileNet)
    */
   /**
    * Create a PoseNet model.
-   * @param {HTMLVideoElement || p5.Video} video  - Optional. A HTML video element or a p5 video element.
-   * @param {options} options - Optional. An object describing a model accuracy and performance.
-   * @param {String} detectionType - Optional. A String value to run 'single' or 'multiple' estimation.
-   * @param {function} callback  Optional. A function to run once the model has been loaded. 
+   * @param {(HTMLVideoElement | p5.Video)} [video] - Optional. A HTML video element or a p5 video element.
+   * @param {Partial<PoseNetOptions>} [options] - Optional. An object describing a model accuracy and performance.
+   * @param {string} [detectionType] - Optional. A String value to run 'single' or 'multiple' estimation.
+   * @param {function} [callback] - Optional. A function to run once the model has been loaded.
    *    If no callback is provided, it will return a promise that will be resolved once the 
    *    model has loaded.
    */
-  constructor(video, options, detectionType, callback) {
+  constructor(video, options = {}, detectionType, callback) {
     super();
     this.video = video;
     /**
      * The type of detection. 'single' or 'multiple'
-     * @type {String}
+     * @type {string}
      * @public
      */
+    this.detectionType = detectionType || options.detectionType || DEFAULTS.detectionType;
     this.modelUrl = options.modelUrl || null;
     this.architecture = options.architecture || DEFAULTS.architecture;
-    this.detectionType = detectionType || options.detectionType || DEFAULTS.detectionType;
     this.outputStride = options.outputStride || DEFAULTS.outputStride;
     this.flipHorizontal = options.flipHorizontal || DEFAULTS.flipHorizontal;
     this.scoreThreshold = options.scoreThreshold || DEFAULTS.scoreThreshold;
@@ -209,31 +211,19 @@ class PoseNet extends EventEmitter {
   }
 }
 
+// TODO: should this accept four arguments?
 const poseNet = (videoOrOptionsOrCallback, optionsOrCallback, cb) => {
-  let video;
-  let options = {};
-  let callback = cb;
+  // args can contain a string detection type, so need to filter before passing to args class
   let detectionType = null;
-
-  if (videoOrOptionsOrCallback instanceof HTMLVideoElement) {
-    video = videoOrOptionsOrCallback;
-  } else if (typeof videoOrOptionsOrCallback === 'object' && videoOrOptionsOrCallback.elt instanceof HTMLVideoElement) {
-    video = videoOrOptionsOrCallback.elt; // Handle a p5.js video element
-  } else if (typeof videoOrOptionsOrCallback === 'object') {
-    options = videoOrOptionsOrCallback;
-  } else if (typeof videoOrOptionsOrCallback === 'function') {
-    callback = videoOrOptionsOrCallback;
-  }
-
-  if (typeof optionsOrCallback === 'object') {
-    options = optionsOrCallback;
-  } else if (typeof optionsOrCallback === 'string') {
-    detectionType = optionsOrCallback;
-  }
-  
-  if (typeof optionsOrCallback === 'function') {
-    callback = optionsOrCallback;
-  } 
+  const args = new ImageModelArgs();
+  [videoOrOptionsOrCallback, optionsOrCallback, cb].forEach((arg, i) => {
+    if ( typeof arg === "string" ) {
+      detectionType = arg;
+    } else {
+      args.addArg(arg, i);
+    }
+  })
+  const {video, options, callback} = args;
 
   return new PoseNet(video, options, detectionType, callback);
 };
