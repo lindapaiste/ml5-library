@@ -3,8 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-/* eslint max-len: "off" */
-/* eslint no-trailing-spaces: "off" */
 /*
 Fast Style Transfer
 This implementation is heavily based on github.com/reiinakano/fast-style-transfer-deeplearnjs by Reiichiro Nakano.
@@ -14,18 +12,11 @@ The original TensorFlow implementation was developed by Logan Engstrom: github.c
 import * as tf from '@tensorflow/tfjs';
 import Video from './../utils/Video';
 import CheckpointLoader from '../utils/checkpointLoader';
-import { array3DToImage } from '../utils/imageUtilities';
 import callCallback from '../utils/callcallback';
+import {ArgSeparator} from "../utils/argSeparator";
+import {toImage} from "../utils/imageConversion";
 
 const IMAGE_SIZE = 200;
-
-const convertCanvasToImage = canvas => {
-  return new Promise(resolve => {
-    const image = new Image(IMAGE_SIZE, IMAGE_SIZE);
-    image.onload = () => resolve(image);
-    image.src = canvas.toDataURL();
-  });
-}
 
 class StyleTransfer extends Video {
   /**
@@ -112,32 +103,14 @@ class StyleTransfer extends Video {
    * @param {function} cb - Optional. A function to run once the model has made the transfer. If no callback is provided, it will return a promise that will be resolved once the model has made the transfer.
    */
   async transfer(inputOrCallback, cb) {
-    let input;
-    let callback = cb;
+    const {image, callback} = new ArgSeparator(inputOrCallback, cb);
 
-    if (inputOrCallback instanceof HTMLVideoElement ||
-        inputOrCallback instanceof HTMLImageElement ||
-        inputOrCallback instanceof ImageData) {
-      input = inputOrCallback;
-    } else if (inputOrCallback instanceof HTMLCanvasElement) {
-      input = await convertCanvasToImage(inputOrCallback);
-    } else if (typeof inputOrCallback === 'object' && inputOrCallback.elt instanceof HTMLCanvasElement) {
-      input = await convertCanvasToImage(inputOrCallback.elt);
-    } else if (typeof inputOrCallback === 'object' && (inputOrCallback.elt instanceof HTMLVideoElement 
-      || inputOrCallback.elt instanceof HTMLImageElement
-      || inputOrCallback.elt instanceof ImageData)) {
-      input = inputOrCallback.elt;
-    } else if (typeof inputOrCallback === 'function') {
-      input = this.video;
-      callback = inputOrCallback;
-    }
-
-    return callCallback(this.transferInternal(input), callback);
+    return callCallback(this.transferInternal(image), callback);
   }
 
   async transferInternal(input) {
     const image = tf.browser.fromPixels(input);
-    const result = array3DToImage(tf.tidy(() => {
+    const result = toImage(tf.tidy(() => {
       const conv1 = this.convLayer(image, 1, true, 0);
       const conv2 = this.convLayer(conv1, 2, true, 3);
       const conv3 = this.convLayer(conv2, 2, true, 6);

@@ -4,11 +4,18 @@
 // https://opensource.org/licenses/MIT
 
 
+import {Tensor} from "@tensorflow/tfjs";
+
 /**
  * @typedef {Object} Classification
  * @param {string} className - The name of the matched class.
  * @param {number} probability - The probability from 0 to 1 that this class name is a match.
  */
+export interface Classification {
+    className: string;
+    probability: number;
+}
+
 
 /**
  * Utility function which limits classifier predictions to a provided number `topK`
@@ -20,7 +27,7 @@
  * @param {string[]} CLASSES - Array of labels.
  * @return {Classification[]} - Array of objects with properties probability and className.
  */
-export function getTopKClassesFromArray(values, k, CLASSES) {
+export function getTopKClassesFromArray(values: number[] | Float32Array, k: number, CLASSES: string[] | Record<number, string>) {
     const labeled = [...values].map((value, i) => ({
         className: CLASSES[i],
         probability: value
@@ -37,7 +44,7 @@ export function getTopKClassesFromArray(values, k, CLASSES) {
  * @param {string[]} CLASSES - Array of labels.
  * @return {Promise<Classification[]>} - Array of objects with properties probability and className.
  */
-export async function getTopKClassesFromTensor(logits, k, CLASSES) {
+export async function getTopKClassesFromTensor(logits: Tensor, k: number, CLASSES: string[] | Record<number, string>) {
     const topK = await logits.topk(k);
     /**
      * @type Float32Array
@@ -50,9 +57,9 @@ export async function getTopKClassesFromTensor(logits, k, CLASSES) {
     const indices = await topK.indices.data();
     topK.indices.dispose();
     // note cannot map the values directly because Float32Array can only map to another Float32Array
-    return Object.keys(values).map((i) => ({
+    return [...values].map((probability, i) => ({
         className: CLASSES[indices[i]],
-        probability: values[i]
+        probability,
     }));
 }
 

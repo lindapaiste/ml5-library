@@ -1,10 +1,11 @@
 import {ArgumentValidator, classifyArguments, ValidatedResults} from "./argumentValidator";
+import callCallback, {Callback} from "./callcallback";
 
 export type AsArgs<ArgMap extends Record<string, ArgumentValidator<any>>> = {
     [K in keyof ArgMap]: ReturnType<ArgMap[K]['validate']>;
 }
 
-interface CreateModelSettings<Model, Instance, Options extends {}, ArgMap extends Record<string, ArgumentValidator<any>> & {options: Options}> {
+interface CreateModelSettings<Model, Instance, Options, ArgMap> {
     acceptsArgs: ArgMap, // TODO: should add callback automatically,
     defaults: Options,
     buildModel: (args: ValidatedResults<ArgMap> & {options: Options}) => Promise<Model>,
@@ -25,6 +26,17 @@ export const createModel = <Model, Instance, Options extends Record<string, any>
             ...defaults,
             ...passedOptions
         };
-        return buildModel({...assigned, options: mergedOptions});
+        return callCallback(buildModel({...assigned, options: mergedOptions}), assigned.callback);
+    }
+}
+
+type Unpromise<T> = T extends Promise<infer U> ? U : T;
+type Element<T> = T extends Array<infer U> ? U : never;
+
+export const wrapAsyncMethod = <M extends (...args: any[]) => Promise<any>>(method: M) => {
+    // add a callback argument
+    // accept the args optionally and in any order
+    return (...args: Array<Element<Parameters<M>> | Callback<Unpromise<ReturnType<M>>>>) => {
+
     }
 }

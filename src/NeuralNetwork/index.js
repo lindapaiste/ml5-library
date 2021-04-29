@@ -5,7 +5,8 @@ import NeuralNetworkVis from './NeuralNetworkVis';
 import callCallback from '../utils/callcallback';
 
 import nnUtils from './NeuralNetworkUtils';
-import { imgToPixelArray, isInstanceOfSupportedElement } from '../utils/imageUtilities';
+import { isInstanceOfSupportedElement } from '../utils/imageUtilities';
+import {toPixels} from "../utils/imageConversion";
 
 const DEFAULTS = {
   inputs: [],
@@ -356,7 +357,7 @@ class DiyNeuralNetwork {
     }
 
     if (imgToPredict) {
-      formattedInputs = imgToPixelArray(imgToPredict);
+      formattedInputs = toPixels(imgToPredict);
     } else {
       formattedInputs = input;
     }

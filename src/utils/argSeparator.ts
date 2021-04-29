@@ -1,7 +1,4 @@
-import {Callback} from "./callcallback";
 import {extractImageElement, ImageArg, TfImageSource, VideoArg} from "./imageUtilities";
-
-export type VideoModelArg<Instance, Options extends object = {}> = VideoArg | Callback<Instance> | Options;
 
 // TODO: generalize to support method calls
 export class InvalidVideoArgError extends TypeError {
@@ -17,6 +14,20 @@ export class InvalidVideoArgError extends TypeError {
     }
 }
 
+type Element<T> = T extends Array<infer U> ? U : never;
+
+/**
+ * Type to extend with args for specific options and callback types
+ */
+export interface BasicArgs {
+    image?: TfImageSource;
+    video?: HTMLVideoElement;
+    options?: object;
+    callback?: Function;
+    string?: string;
+    number?: number;
+}
+
 /**
  * Helper utility to parse an array of arguments into known properties
  *
@@ -26,12 +37,18 @@ export class InvalidVideoArgError extends TypeError {
  * @property {Object} [options]
  * @property {function} [callback]
  */
-export class ImageModelArgs<Callback extends Function, Options extends object = {}> {
+export class ArgSeparator<Args extends any[]> {
 
+    /**
+     * Strict types here mean no errors when destructuring,
+     * but makes assignment inside this class tougher.
+     */
     image?: TfImageSource;
     video?: HTMLVideoElement;
-    options?: Options;
-    callback?: Callback;
+    options?: Exclude<Extract<Element<Args>, object>, ImageArg | Function>;
+    callback?: Extract<Element<Args>, Function>;
+    string?: string;
+    number?: number;
 
     /**
      * Arguments used to CREATE an image-based model can be:
@@ -50,8 +67,15 @@ export class ImageModelArgs<Callback extends Function, Options extends object = 
      *
      *  @param {(ImageArg | VideoArg | Object | function)[]} args
      */
-    constructor(...args: Array<Callback | Options | ImageArg | VideoArg>) {
+    constructor(...args: Args) {
         args.forEach(this.addArg);
+    }
+
+    /**
+     * Static constructor for easier chaining.
+     */
+    static from<T extends any[]>(...args: T): ArgSeparator<T> {
+        return new ArgSeparator(...args);
     }
 
     /**
@@ -60,84 +84,61 @@ export class ImageModelArgs<Callback extends Function, Options extends object = 
      * @param {(ImageArg | VideoArg | Object | function)} arg - a video, callback, or options object
      * @param {number} [index] - optional number used in error messages
      */
-    addArg(arg: Callback | Options | ImageArg | VideoArg, index?: number): void {
+    addArg(arg: Element<Args>, index?: number): void {
         // skip over falsey arguments and don't throw any error, assuming that these are omissions
         // do this check first to prevent accessing properties on null, which is an object
-        if ( ! arg ) {
+        if (arg === undefined || arg === null) {
             return;
         }
-        if (typeof arg === "function") {
-            this.callback = arg;
-        } else if (typeof arg === "object") {
-            // Videos are also images, but images are not all videos,
-            // so keep separate properties but store videos in both
-            const image = extractImageElement(arg);
-            if (image) {
-                this.image = image;
-                if ( image instanceof HTMLVideoElement ) {
-                    this.video = image;
+        switch (typeof arg) {
+            case "string":
+                this.string = arg;
+                return;
+            case "number":
+                this.number = arg;
+                return;
+            case "function":
+                this.callback = arg
+                return;
+            case "object":
+                // Videos are also images, but images are not all videos,
+                // so keep separate properties but store videos in both
+                const image = extractImageElement(arg);
+                if (image) {
+                    this.image = image;
+                    if (image instanceof HTMLVideoElement) {
+                        this.video = image;
+                    }
                 }
-            }
-            // objects which are not images are assumed to be options
-            else {
-                this.options = arg;
-            }
-        } else {
-            // Notify user about invalid arguments (would be ok to just skip)
+                // objects which are not images are assumed to be options
+                else {
+                    this.options = arg;
+                }
+                return;
+            default:
+                // Notify user about invalid arguments (would be ok to just skip)
                 throw new InvalidVideoArgError(arg, index);
         }
     }
-}
-
-
-/**
- * Helper utility to parse an array of arguments into known properties
- */
-export class ImageMethodArgs<Callback extends Function, Options extends object = {}> {
-
-    image?: TfImageSource;
-    options?: Options;
-    callback?: Callback;
 
     /**
-     * Arguments used to call a method an image-based model can be:
-     *  - image: an image or video element or an ImageData object.  Valid types: HTMLImageElement, HTMLCanvasElement,
-     *    HTMLVideoElement, ImageData, p5 image, p5 video.
-     *  - options: an object of options specific to this model.
-     *  - callback: a function to run once the method has been completed.
-     *
-     * Expected to be provided in order image, options, callback with any omitted.
-     * This function does not actually require any particular order.
-     *
-     * @param {(ImageArg| Object | function)[]} args
+     * Check whether or not a given property has been set
+     * @param property
      */
-    constructor(...args: Array<Callback | Options | ImageArg>) {
-        args.forEach(this.addArg);
+    hasProperty<K extends keyof this>(property: K): this is this & Record<K, NonNullable<this[K]>> {
+        return this[property] !== undefined;
     }
 
     /**
-     * Can add arguments through the constructor or at any time after construction.
-     *
-     * @param {ImageArg| Object | function} arg - an image, callback, or options object
-     * @param {number} [index] - optional number used in error messages
+     * Check that an argument exists and throw an error if it doesn't
+     * @param property
+     * @param message
      */
-    addArg(arg: Callback | Options | ImageArg, index?: number): void {
-        if (typeof arg === "function") {
-            this.callback = arg;
-        } else if (typeof arg === "object") {
-            const image = extractImageElement(arg);
-            if (image) {
-                this.image = image;
-            } else {
-                this.options = arg;
-            }
-        } else {
-            // Notify user about invalid arguments (would be ok to just skip)
-            // But skip over falsey arguments assuming that these are omissions
-            if (arg) {
-                throw new InvalidVideoArgError(arg, index);
-            }
+    require<K extends keyof this>(property: K, message?: string): this & Record<K, NonNullable<this[K]>> {
+        if ( this.hasProperty(property)) {
+            return this;
         }
+        throw new Error( message || `An argument for ${property} must be provided.`);
     }
 }
 

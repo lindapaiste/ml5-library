@@ -9,9 +9,8 @@ Image Classifier using pre-trained networks
 
 import * as tf from '@tensorflow/tfjs';
 import callCallback from '../utils/callcallback';
-import {array3DToImage} from '../utils/imageUtilities';
-import p5Utils from '../utils/p5Utils';
-import {ImageModelArgs} from "../utils/imageModelArgs";
+import {ArgSeparator} from "../utils/argSeparator";
+import {generatedImageResult} from "../utils/GeneratedImage";
 
 const DEFAULTS = {
   modelPath: 'https://raw.githubusercontent.com/zaidalyafeai/HostedModels/master/unet-128/model.json',
@@ -45,30 +44,8 @@ class UNET {
 
   async segment(inputOrCallback, cb) {
     await this.ready;
-    const {image: imgToPredict, callback} = new ImageModelArgs(inputOrCallback, cb);
+    const {image: imgToPredict, callback} = new ArgSeparator(inputOrCallback, cb);
     return callCallback(this.segmentInternal(imgToPredict), callback);
-  }
-
-  // TODO: move to image utilities
-  static dataURLtoBlob(dataurl) {
-    const arr = dataurl.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-
-    while (n) {
-      u8arr[n] = bstr.charCodeAt(n);
-      n -= 1;
-    }
-    return new Blob([u8arr], {
-      type: mime
-    });
-  }
-
-  async convertToP5Image(tfBrowserPixelImage){
-    const blob1 = await p5Utils.rawToBlob(tfBrowserPixelImage, this.config.imageSize, this.config.imageSize);
-    return p5Utils.blobToP5Image(blob1);
   }
 
   async segmentInternal(imgToPredict) {
@@ -124,58 +101,35 @@ class UNET {
 
     this.isPredicting = false;
 
-    // these come first because array3DToImage() will dispose of the input tensor
-    const maskFeat = await tf.browser.toPixels(featureMask);
-    const maskBg = await tf.browser.toPixels(backgroundMask);
-    const mask = await tf.browser.toPixels(segmentation);
-
-    const maskFeatDom = array3DToImage(featureMask);
-    const maskBgDom = array3DToImage(backgroundMask);
-    const maskFeatBlob = UNET.dataURLtoBlob(maskFeatDom.src);
-    const maskBgBlob = UNET.dataURLtoBlob(maskBgDom.src);
-    
-
-    let pFeatureMask;
-    let pBgMask;
-    let pMask;
-
-    if (p5Utils.checkP5()) {
-      pFeatureMask = await this.convertToP5Image(maskFeat);
-      pBgMask = await this.convertToP5Image(maskBg)
-      pMask = await this.convertToP5Image(mask)
-    }
-
-    if(!this.config.returnTensors){
-      featureMask.dispose();
-      backgroundMask.dispose();
-      segmentation.dispose();
-    } 
+    const featureRes = await generatedImageResult(featureMask, this.config);
+    const backgroundRes = await generatedImageResult(backgroundMask, this.config);
+    const maskRes = await generatedImageResult(segmentation, this.config);
 
     // TODO: combine with logic in BodyPix
     return {
-      segmentation:mask, 
+      segmentation: maskRes.raw,
       blob: {
-        featureMask: maskFeatBlob,
-        backgroundMask: maskBgBlob
+        featureMask: featureRes.blob,
+        backgroundMask: backgroundRes.blob
       },
-      tensor: {
+      tensor: this.config.returnTensors ? {
         featureMask,
         backgroundMask,
-      },
+      }: {},
       raw: {
-        featureMask: maskFeat,
-        backgroundMask: maskBg
+        featureMask: featureRes.raw,
+        backgroundMask: backgroundRes.raw
       },
       // returns if p5 is available
-      featureMask: pFeatureMask,
-      backgroundMask: pBgMask,
-      mask: pMask
+      featureMask: featureRes.image,
+      backgroundMask: backgroundRes.image,
+      mask: maskRes.image
     };
   }
 }
 
 const uNet = (videoOr, optionsOr, cb) => {
-const {video, options, callback} = new ImageModelArgs(videoOr, optionsOr, cb);
+const {video, options, callback} = new ArgSeparator(videoOr, optionsOr, cb);
   return new UNET(video, options, callback);
 };
 

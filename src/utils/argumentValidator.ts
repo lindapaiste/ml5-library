@@ -98,7 +98,8 @@ export const ARGS = {
     number
 }
 
-export type ValidatedResults<ValidatorsMap extends Record<string, ArgumentValidator<any>>> = {
+// extends Record<string, ArgumentValidator<any>>
+export type ValidatedResults<ValidatorsMap> = {
     [K in keyof ValidatorsMap]?: ValidatorsMap[K] extends ArgumentValidator<infer V> ? V : never;
 }
 

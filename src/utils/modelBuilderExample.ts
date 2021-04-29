@@ -2,6 +2,7 @@ import {createModel} from "./modelBuilder";
 import {ARGS} from "./argumentValidator";
 import * as handposeCore from "@tensorflow-models/handpose";
 import * as faceapiCore from "face-api.js";
+import {HandposeOptions} from "../Handpose";
 
 const handpose = createModel({
     acceptsArgs: {
@@ -9,16 +10,16 @@ const handpose = createModel({
         options: ARGS.options,
         callback: ARGS.callback,
     },
-    defaults: {
-        //handpose doesn't actually define defaults!!
-    },
-    buildModel: (args) => {
-        return handposeCore.load(args.options);
+    // handpose doesn't actually define defaults!!
+    // so type assertion is need here, but would not be if type could be inferred from the defaults
+    defaults: {} as Partial<HandposeOptions>,
+    buildModel: ({options, video}) => {
+        return handposeCore.load(options);
         
         // TODO: handle video
     },
     methods: {
-        
+        // TODO
     }
 })
 

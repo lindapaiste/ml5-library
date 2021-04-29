@@ -13,13 +13,54 @@ import * as tf from "@tensorflow/tfjs";
 import axios from "axios";
 import sampleFromDistribution from "./../utils/sample";
 import CheckpointLoader from "../utils/checkpointLoader";
-import callCallback from "../utils/callcallback";
+import callCallback, {Callback} from "../utils/callcallback";
+import {Rank, Tensor} from "@tensorflow/tfjs";
+import {Tensor2D} from "@tensorflow/tfjs-core";
 
 const regexCell = /cell_[0-9]|lstm_[0-9]/gi;
 const regexWeights = /weights|weight|kernel|kernels|w/gi;
 const regexFullyConnected = /softmax/gi;
 
+interface State {
+  c: Tensor2D[];
+  h: Tensor2D[];
+}
+
+const ZERO_STATE = { c: [], h: [] };
+
+/**
+ * @typedef {Object} options
+ * @property {String} seed
+ * @property {number} length
+ * @property {number} temperature
+ */
+
+interface CharRNNOptions {
+  seed: string;
+  length: number;
+  temperature: number;
+  stateful: boolean;
+}
+
+const DEFAULTS = {
+  seed: "a", // TODO: use no seed by default
+  length: 20,
+  temperature: 0.5,
+  stateful: false,
+};
+
+
 class CharRNN {
+  ready: Promise<this>;
+  cellsAmount: number;
+  cells: any[];//TODO;
+  state: State;
+  zeroState: State;
+  vocab: {};
+  vocabSize: number;
+  probabilities: number[];
+  defaults: CharRNNOptions; //TODO: this doesn't belong on the instance
+  model: Record<string, Tensor>;
   /**
    * Create a CharRNN.
    * @param {String} modelPath - The path to the trained charRNN model.
@@ -27,13 +68,13 @@ class CharRNN {
    *    the model has loaded. If no callback is provided, it will return a
    *    promise that will be resolved once the model has loaded.
    */
-  constructor(modelPath, callback) {
+  constructor(modelPath: string, callback?: Callback<CharRNN>) {
     /**
      * Boolean value that specifies if the model has loaded.
      * @type {boolean}
      * @public
      */
-    this.ready = false;
+    //this.ready = false;
 
     /**
      * The pre-trained charRNN model.
@@ -61,14 +102,9 @@ class CharRNN {
     };
 
     this.ready = callCallback(this.loadCheckpoints(modelPath), callback);
-    // this.then = this.ready.then.bind(this.ready);
   }
 
-  resetState() {
-    this.state = this.zeroState;
-  }
-
-  setState(state) {
+  setState(state: State) {
     this.state = state;
   }
 
@@ -76,7 +112,7 @@ class CharRNN {
     return this.state;
   }
 
-  async loadCheckpoints(path) {
+  async loadCheckpoints(path: string) {
     const reader = new CheckpointLoader(path);
     const vars = await reader.getAllVariables();
     Object.keys(vars).forEach(key => {
@@ -116,7 +152,7 @@ class CharRNN {
   async initCells() {
     this.cells = [];
     this.zeroState = { c: [], h: [] };
-    const forgetBias = tf.tensor(1.0);
+    const forgetBias = tf.tensor<Rank.R0>(1.0);
 
     const lstm = i => {
       const cell = (DATA, C, H) =>
@@ -209,15 +245,10 @@ class CharRNN {
    * Reset the model state.
    */
   reset() {
-    this.state = this.zeroState;
+    this.state = ZERO_STATE;
   }
 
-  /**
-   * @typedef {Object} options
-   * @property {String} seed
-   * @property {number} length
-   * @property {number} temperature
-   */
+
 
   // stateless
   /**
@@ -231,7 +262,7 @@ class CharRNN {
    *    has generated content. If no callback is provided, it will return a promise
    *    that will be resolved once the model has generated new content.
    */
-  async generate(options, callback) {
+  async generate(options: CharRNNOptions, callback) {
     this.reset();
     return callCallback(this.generateInternal(options), callback);
   }
@@ -244,7 +275,7 @@ class CharRNN {
    *    model finished adding the seed. If no callback is provided, it will
    *    return a promise that will be resolved once the prediction has been generated.
    */
-  async predict(temp, callback) {
+  async predict(temp: number, callback) {
     let probabilitiesNormalized = [];
     const temperature = temp > 0 ? temp : 0.1;
     const outputH = this.state.h[1];
@@ -260,7 +291,6 @@ class CharRNN {
     if (callback) {
       callback(result);
     }
-    /* eslint max-len: ["error", { "code": 180 }] */
     const pm = Object.keys(this.vocab).map(c => ({
       char: c,
       probability: this.probabilities[this.vocab[c]],
@@ -278,7 +308,7 @@ class CharRNN {
    *    the model finished adding the seed. If no callback is provided, it
    *    will return a promise that will be resolved once seed has been fed.
    */
-  async feed(inputSeed, callback) {
+  async feed(inputSeed: string, callback) {
     await this.ready;
     const seed = Array.from(inputSeed);
     const encodedInput = [];

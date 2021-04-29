@@ -9,10 +9,11 @@ This version is based on alantian's TensorFlow.js implementation: https://github
 */
 
 import * as tf from '@tensorflow/tfjs';
-import axios from 'axios';
-import callCallback from '../utils/callcallback';
-import p5Utils from '../utils/p5Utils';
+import callCallback, {Callback} from '../utils/callcallback';
 import modelLoader from "../utils/modelLoader";
+import {GeneratedImageResult, generatedImageResult} from "../utils/GeneratedImage";
+import {ArgSeparator} from "../utils/argSeparator";
+import {loadFile} from "../utils/io";
 // Default pre-trained face model
 
 // const DEFAULT = {
@@ -26,36 +27,47 @@ import modelLoader from "../utils/modelLoader";
  * @typedef {Object} DCGANOptions
  * @property {boolean} returnTensors
  */
+interface DCGANOptions {
+    returnTensors?: boolean;
+}
+
+interface ModelInfo {
+    modelLatentDim: number;
+    model: string;
+}
 
 class DCGANBase {
+    ready: Promise<DCGANBase>;
+    modelReady: boolean;
+    model?: tf.LayersModel;
+    modelInfo?: ModelInfo;
+    config: Required<DCGANOptions>;
+
     /**
      * Create an DCGAN.
      * @param {string} modelPath - The name of the model to use.
      * @param {DCGANOptions} [options]
      * @param {function} [callback] - A callback to be called when the model is ready.
      */
-    constructor(modelPath, options, callback) {
-        this.model = {};
-        this.modelPath = modelPath;
-        this.modelInfo = {};
-        this.modelPathPrefix = '';
+    constructor(modelPath: string, options: DCGANOptions = {}, callback?: Callback<DCGANBase>) {
         this.modelReady = false;
         this.config = {
             returnTensors: options.returnTensors || false,
         }
-        this.ready = callCallback(this.loadModel(), callback);
+        this.ready = callCallback(this.loadModel(modelPath), callback);
     }
 
     /**
      * Load the model and set it to this.model
+     * @param {string} modelPath
      * @return {this} the dcgan.
      */
-    async loadModel() {
-        const modelInfo = await axios.get(this.modelPath);
-        this.modelInfo = modelInfo.data
+    async loadModel(modelPath: string): Promise<this> {
+        this.modelInfo = await loadFile<ModelInfo>(modelPath);
 
-        const [modelUrl] = this.modelPath.split('manifest.json')
-        const modelJsonPath = modelLoader.isAbsoluteURL(modelUrl) ? this.modelInfo.model : this.modelPathPrefix + this.modelInfo.model
+        const [modelUrl] = modelPath.split('manifest.json');
+        // TODO: previous code made no sense -- what is intended to be the base here?
+        const modelJsonPath = modelLoader.isAbsoluteURL(modelUrl) ? this.modelInfo.model : modelUrl + this.modelInfo.model
 
         this.model = await tf.loadLayersModel(modelJsonPath);
         this.modelReady = true;
@@ -68,7 +80,7 @@ class DCGANBase {
      * @param {object} latentVector - an array containing the latent vector; otherwise use random vector
      * @return {object} a promise or the result of the callback function.
      */
-    async generate(callback, latentVector) {
+    async generate(callback: Callback<GeneratedImageResult>, latentVector?: number[]): Promise<GeneratedImageResult> {
         await this.ready;
         return callCallback(this.generateInternal(latentVector), callback);
     }
@@ -79,24 +91,23 @@ class DCGANBase {
      * @param {object} latentVector - an array containing the latent vector; otherwise use random vector
      * @return {object} a tensor
      */
-    async compute(latentDim, latentVector) {
-        const y = tf.tidy(() => {
+    async compute(latentDim: number, latentVector?: number[]): Promise<tf.Tensor3D> {
+        await this.ready;
+        return tf.tidy(() => {
             let z;
-            if (Array.isArray(latentVector) === false) {
-                z = tf.randomNormal([1, latentDim]);
-            } else {
+            if (Array.isArray(latentVector)) {
                 const buffer = tf.buffer([1, latentDim]);
                 for (let count = 0; count < latentDim; count += 1) {
                     buffer.set(latentVector[count], 0, count);
                 }
                 z = buffer.toTensor();
+            } else {
+                z = tf.randomNormal([1, latentDim]);
             }
             // TBD: should model be a parameter to compute or is it ok to reference this.model here?
-            const yDim = this.model.predict(z).squeeze().transpose([1, 2, 0]).div(tf.scalar(2)).add(tf.scalar(0.5));
-            return yDim;
+            return (this.model!.predict(z) as tf.Tensor).squeeze().transpose([1, 2, 0])
+                .div(tf.scalar(2)).add<tf.Tensor3D>(tf.scalar(0.5));
         });
-
-        return y;
     }
 
     /**
@@ -104,52 +115,19 @@ class DCGANBase {
      * @param {object} latentVector - an array containing the latent vector; otherwise use random vector
      * @return {object} includes blob, raw, and tensor. if P5 exists, then a p5Image
      */
-    async generateInternal(latentVector) {
-
-        const {
-            modelLatentDim
-        } = this.modelInfo;
+    async generateInternal(latentVector?: number[]): Promise<GeneratedImageResult> {
+        const {modelLatentDim} = this.modelInfo!;
         const imageTensor = await this.compute(modelLatentDim, latentVector);
 
-        // get the raw data from tensor
-        const raw = await tf.browser.toPixels(imageTensor);
-        // get the blob from raw
-        const [imgHeight, imgWidth] = imageTensor.shape;
-        const blob = await p5Utils.rawToBlob(raw, imgWidth, imgHeight);
-
-        // get the p5.Image object
-        let p5Image;
-        if (p5Utils.checkP5()) {
-            p5Image = await p5Utils.blobToP5Image(blob);
-        }
-
-        // wrap up the final js result object
-        const result = {};
-        result.blob = blob;
-        result.raw = raw;
-
-
-        if (p5Utils.checkP5()) {
-            result.image = p5Image;
-        }
-
-        if (!this.config.returnTensors) {
-            result.tensor = null;
-            imageTensor.dispose();
-        } else {
-            result.tensor = imageTensor;
-        }
-
-        return result;
-
+        return generatedImageResult(imageTensor, this.config);
     }
 
 }
 
-const DCGAN = (modelPath, optionsOrCb, cb) => {
-    let callback;
-    let options = {};
-    if (typeof modelPath !== 'string') {
+const DCGAN = (modelPath: string, optionsOrCb?: DCGANOptions | Callback<DCGANBase>, cb?: Callback<DCGANBase>) => {
+    const {callback, options, string} = new ArgSeparator(modelPath, optionsOrCb, cb);
+
+    if (! string) {
         throw new Error(`Please specify a path to a "manifest.json" file: \n
          "models/face/manifest.json" \n\n
          This "manifest.json" file should include:\n
@@ -162,17 +140,8 @@ const DCGAN = (modelPath, optionsOrCb, cb) => {
          `);
     }
 
-    if (typeof optionsOrCb === 'function') {
-        callback = optionsOrCb;
-    } else if (typeof optionsOrCb === 'object') {
-        options = optionsOrCb;
-        callback = cb;
-    }
-
-
-    const instance = new DCGANBase(modelPath, options, callback);
+    const instance = new DCGANBase(string, options, callback);
     return callback ? instance : instance.ready;
-
 }
 
 export default DCGAN;

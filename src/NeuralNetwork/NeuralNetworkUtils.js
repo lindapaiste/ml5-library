@@ -1,3 +1,5 @@
+// TODO: why is this a class?  Does not use `this` anywhere!
+
 class NeuralNetworkUtils {
   constructor(options) {
     this.options = options || {};
@@ -144,8 +146,7 @@ class NeuralNetworkUtils {
 }
 
 const neuralNetworkUtils = () => {
-  const instance = new NeuralNetworkUtils();
-  return instance;
+  return new NeuralNetworkUtils();
 }
 
 export default neuralNetworkUtils();

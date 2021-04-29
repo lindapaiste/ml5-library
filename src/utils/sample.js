@@ -5,7 +5,7 @@
 
 // Utils for sampling
 
-// Sample from a distrubution
+// Sample from a distribution
 const sampleFromDistribution = (input) => {
   const randomValue = Math.random();
   let sum = 0;

@@ -9,7 +9,7 @@ K-Means Algorithm (with Euclidean distance).
 */
 
 import * as tf from '@tensorflow/tfjs';
-import callCallback from '../utils/callcallback';
+import callCallback, {Callback} from '../utils/callcallback';
 import {randomSample} from '../utils/random';
 
 /**
@@ -19,13 +19,19 @@ import {randomSample} from '../utils/random';
  * @property {number} threshold - Threshold for updated centroid distance before declaring convergence. Default 0.5
  */
 
+interface KMeansOptions {
+  k: number;
+  maxIter: number;
+  threshold: number;
+}
+
 /**
  * @type {KMeansOptions}
  */
-const DEFAULTS = {
-  'k': 3,
-  'maxIter': 5,
-  'threshold': 0.5,
+const DEFAULTS: KMeansOptions = {
+  k: 3,
+  maxIter: 5,
+  threshold: 0.5,
 };
 
 // TODO: can maybe combine with csv read in NeuralNetwork
@@ -34,7 +40,7 @@ const DEFAULTS = {
  * @param {string} path
  * @return {Promise<tf.TensorContainer[]>}
  */
-async function readCsv(path) {
+async function readCsv(path: string) {
   const myCsv = tf.data.csv(path);
   return myCsv.toArray();
 }
@@ -44,6 +50,7 @@ async function readCsv(path) {
  * properties like `{ x: 0, y: 0 }`, or an array of numbers like `[0, 0]`.
  * @typedef {Array<(Record<any, number> | Array<number>)>} KMeansDataSet
  */
+type KMeansDataSet = Array<(Record<any, number> | Array<number>)>;
 
 /**
  * Load and flatten an array of arrays, an array of objects, or a string
@@ -51,7 +58,7 @@ async function readCsv(path) {
  * @param {(string|KMeansDataSet)} inputData
  * @return {number[][]}
  */
-async function loadDataset(inputData) {
+async function loadDataset(inputData: string | KMeansDataSet): number[][] {
   let data;
   if (typeof inputData === 'string') {
     data = await readCsv(inputData);
@@ -75,6 +82,13 @@ async function loadDataset(inputData) {
  * @property {tf.Tensor2D} centroidsOld
  */
 class KMeans {
+  config: KMeansOptions;
+  dataset: Array<[number, number] & {tensor: tf.Tensor<tf.Rank.R1>, centroid: number}>;
+  ready: Promise<KMeans>;
+  dataTensor: tf.Tensor;
+  centroids: tf.Tensor2D;
+  private centroidsOld?: tf.Tensor2D;
+
   /**
    * Create a K-Means.
    * @param {(string | KMeansDataSet)} dataset - The dataset to cluster.
@@ -86,7 +100,7 @@ class KMeans {
    *    the model has loaded. If no callback is provided, it will return a 
    *    promise that will be resolved once the model has loaded.
    */
-  constructor(dataset, options = {}, callback) {
+  constructor(dataset: string | KMeansDataSet, options: Partial<KMeansOptions> = {}, callback?: Callback<KMeans>) {
     this.config = {
       ...options,
       ...DEFAULTS
@@ -102,7 +116,7 @@ class KMeans {
    * @param {(string | KMeansDataSet)} dataset
    * @return {Promise<this>}
    */
-  async load(dataset) {
+  async load(dataset: string | KMeansDataSet) {
     this.dataset = await loadDataset(dataset);
     tf.tidy( () => {
       this.dataTensor = tf.tensor2d(this.dataset);
@@ -124,12 +138,12 @@ class KMeans {
   fit() {
     this.getClosestCentroids()
     this.recenterCentroids();
-    let centroidDistance = KMeans.getEuclideanDistance(this.centroids, this.centroidsOld);
+    let centroidDistance = KMeans.getEuclideanDistance(this.centroids, this.centroidsOld!);
     let iteration = 0;
     while (centroidDistance > this.config.threshold && iteration < this.config.maxIter) {
       this.getClosestCentroids();
       this.recenterCentroids();
-      centroidDistance = KMeans.getEuclideanDistance(this.centroids, this.centroidsOld);
+      centroidDistance = KMeans.getEuclideanDistance(this.centroids, this.centroidsOld!);
       iteration += 1;
     }
   }
@@ -151,7 +165,7 @@ class KMeans {
    * @param {tf.Tensor} dataTensor
    * @return {number}
    */
-  closestCentroid(dataTensor) {
+  closestCentroid(dataTensor: tf.Tensor) {
     return tf.tidy(() => {
       const dist = this.centroids.squaredDifference(dataTensor).sum(1).sqrt();
       return dist.argMin().arraySync();
@@ -166,7 +180,7 @@ class KMeans {
    * @param {(number[] | Record<any, number>)} value - a single point object `{ x: 0, y: 0 }` or tuple `[0, 0]`
    * @return
    */
-  classify(value) {
+  classify(value: number[] | Record<any, number>) {
     return tf.tidy(() => {
       // input must be array or object
       const valueTensor = tf.tensor1d(Object.values(value));
@@ -206,7 +220,7 @@ class KMeans {
    * @param {tf.Tensor2D} tensor2
    * @return {number}
    */
-  static getEuclideanDistance(tensor1, tensor2) {
+  static getEuclideanDistance(tensor1: tf.Tensor2D, tensor2: tf.Tensor2D) {
     // calculate euclidean distance between two arrays
     const distTensor = tf.tidy(() => {
       const distance = tf.squaredDifference(tensor1, tensor2).sum().sqrt();

@@ -17,7 +17,8 @@ import callCallback, {Callback} from '../utils/callcallback';
 import p5Utils from '../utils/p5Utils';
 import BODYPIX_PALETTE from './BODYPIX_PALETTE';
 import {MobileNetMultiplier, OutputStride} from "@tensorflow-models/body-pix/dist/mobilenet";
-import {ImageModelArgs} from "../utils/imageModelArgs";
+import {ArgSeparator} from "../utils/argSeparator";
+import {TfImageSource} from "../utils/imageUtilities";
 
 interface BodyPixOptions {
   multiplier: MobileNetMultiplier;
@@ -240,11 +241,11 @@ class BodyPix {
    * @return {function} a promise or the results of a given callback, cb.
    */
   async segmentWithParts(optionsOrCallback, configOrCallback, cb) {
-    const {image, options, callback} = new ImageModelArgs(optionsOrCallback, configOrCallback, cb);
+    const {image, options, callback} = new ArgSeparator(optionsOrCallback, configOrCallback, cb);
     const imgToSegment = image || this.video;
     if ( ! imgToSegment ) { // Handle unsupported input
       throw new Error(
-          'No input image provided. If you want to classify a video, pass the video element in the constructor. ',
+          'No input image provided. If you want to classify a video, pass the video element in the constructor.',
       );
     }
 
@@ -364,21 +365,19 @@ class BodyPix {
    * @param {function} cb - a callback function that handles the results of the function.
    * @return {function} a promise or the results of a given callback, cb.
    */
-  async segment(optionsOrCallback, configOrCallback, cb) {
-    const {image, options, callback} = new ImageModelArgs(optionsOrCallback, configOrCallback, cb);
-    const imgToSegment = image || this.video;
-    if ( ! imgToSegment ) { // Handle unsupported input
-      throw new Error(
-          'No input image provided. If you want to classify a video, pass the video element in the constructor. ',
-      );
-    }
-    return callCallback(this.segmentInternal(imgToSegment, options), callback);
+  async segment(optionsOrCallback?: TfImageSource, configOrCallback?: BodyPixOptions, cb?: Callback<any>) {
+    const {image, options, callback} = ArgSeparator.from(this.video, optionsOrCallback, configOrCallback, cb)
+        .require(
+            'image',
+            'No input image provided. If you want to classify a video, pass the video element in the constructor.'
+        );
+    return callCallback(this.segmentInternal(image, options), callback);
   }
 
 }
 
 const bodyPix = (videoOrOptionsOrCallback, optionsOrCallback, cb) => {
-  const {video, options, callback} = new ImageModelArgs(videoOrOptionsOrCallback, optionsOrCallback, cb);
+  const {video, options, callback} = new ArgSeparator(videoOrOptionsOrCallback, optionsOrCallback, cb);
 
   const instance = new BodyPix(video, options, callback);
   return callback ? instance : instance.ready;

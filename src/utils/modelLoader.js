@@ -4,8 +4,7 @@ function isAbsoluteURL(str) {
 }
 
 function getModelPath(absoluteOrRelativeUrl) {
-  const modelJsonPath = isAbsoluteURL(absoluteOrRelativeUrl) ? absoluteOrRelativeUrl : window.location.pathname + absoluteOrRelativeUrl
-  return modelJsonPath;
+  return isAbsoluteURL(absoluteOrRelativeUrl) ? absoluteOrRelativeUrl : window.location.pathname + absoluteOrRelativeUrl;
 }
 
 export default {

@@ -8,6 +8,7 @@ General Feature Extractor Manager
 */
 
 import Mobilenet from './Mobilenet';
+import {ArgSeparator} from "../utils/argSeparator";
 
 /**
  * @typedef {Object} FeatureExtractorOptions
@@ -29,23 +30,11 @@ import Mobilenet from './Mobilenet';
  * @param {function} [cb] - Optional.
  */
 const featureExtractor = (model, optionsOrCallback, cb) => {
-  let modelName;
-  if (typeof model !== 'string') {
+  const {string: modelName, options, callback} = new ArgSeparator(model, optionsOrCallback, cb);
+  if (! modelName) {
     throw new Error('Please specify a model to use. E.g: "MobileNet"');
-  } else {
-    modelName = model.toLowerCase();
   }
-
-  let options = {};
-  let callback = cb;
-
-  if (typeof optionsOrCallback === 'object') {
-    options = optionsOrCallback;
-  } else if (typeof optionsOrCallback === 'function') {
-    callback = optionsOrCallback;
-  }
-
-  if (modelName === 'mobilenet') {
+  if (modelName.toLowerCase() === 'mobilenet') {
     return new Mobilenet(options, callback);
   }
   throw new Error(`${modelName} is not a valid model.`);

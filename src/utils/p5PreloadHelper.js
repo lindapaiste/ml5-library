@@ -6,8 +6,8 @@
 
 /**
  * a list to store all functions to hook p5 preload
- * @param {obj} object or prototype to wrap with
- * @returns obj
+ * @param {object} obj or prototype to wrap with
+ * @returns {object}
  */
 export default function registerPreload(obj) {
   if (typeof window === 'undefined') return obj;

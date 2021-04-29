@@ -1,9 +1,30 @@
 import * as tf from '@tensorflow/tfjs';
 import axios from 'axios';
-import { saveBlob } from '../utils/io';
+import {saveBlob} from '../utils/io';
 import nnUtils from './NeuralNetworkUtils';
+import callCallback, {Callback} from "../utils/callcallback";
+import {ArgSeparator} from "../utils/argSeparator";
+
+interface Metadata {
+  inputUnits: number;
+  outputUnits: number;
+  // objects describing input/output data by property name
+  inputs: Record<string, string>, // { name1: {dtype}, name2: {dtype}  }
+  outputs: Record<string, string>, // { name1: {dtype} }
+  isNormalized: boolean;
+}
 
 class NeuralNetworkData {
+  meta: Metadata;
+  isMetadataReady: boolean;
+  isWarmedUp: boolean;
+  data: {
+    raw: {
+      xs: {};
+      yx: {};
+    }[]
+  }
+
   constructor() {
     this.meta = {
       inputUnits: null, // Number
@@ -323,9 +344,7 @@ class NeuralNetworkData {
     const normXs = this.normalizeInputData(dataRaw, meta.inputs, 'xs');
     const normYs = this.normalizeInputData(dataRaw, meta.outputs, 'ys');
 
-    const normalizedData = nnUtils.zipArrays(normXs, normYs);
-
-    return normalizedData;
+    return nnUtils.zipArrays(normXs, normYs);
   }
 
   /**
@@ -582,7 +601,7 @@ class NeuralNetworkData {
    * @param {*} inputs
    * @param {*} outputs
    */
-  async loadDataFromUrl(dataUrl, inputs, outputs) {
+  async loadDataFromUrl(dataUrl: string, inputs, outputs) {
     try {
       let result;
 
@@ -728,7 +747,7 @@ class NeuralNetworkData {
    * saveData
    * @param {*} name
    */
-  async saveData(name) {
+  async saveData(name?: string) {
     const today = new Date();
     const date = `${String(today.getFullYear())}-${String(today.getMonth() + 1)}-${String(
       today.getDate(),
@@ -753,27 +772,12 @@ class NeuralNetworkData {
    * @param {*} nameOrCb
    * @param {*} cb
    */
-  async saveMeta(nameOrCb, cb) {
-    let modelName;
-    let callback;
-
-    if (typeof nameOrCb === 'function') {
-      modelName = 'model';
-      callback = nameOrCb;
-    } else if (typeof nameOrCb === 'string') {
-      modelName = nameOrCb;
-
-      if (typeof cb === 'function') {
-        callback = cb;
-      }
-    } else {
-      modelName = 'model';
-    }
-
-    await saveBlob(JSON.stringify(this.meta), `${modelName}_meta.json`, 'text/plain');
-    if (callback) {
-      callback();
-    }
+  async saveMeta(nameOrCb?: string | Callback<void>, cb?: Callback<void>): Promise<void> {
+    const {string: modelName = 'model', callback} = new ArgSeparator(nameOrCb, cb);
+    return callCallback(
+        saveBlob(JSON.stringify(this.meta), `${modelName}_meta.json`, 'text/plain'),
+        callback
+    );
   }
 
   /**

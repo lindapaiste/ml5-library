@@ -13,14 +13,25 @@
 export type Callback<T> = (error: any, result?: T) => void;
 
 /**
+ * Helper function allows for calling a void callback function which might be undefined.
+ * @param callback
+ * @param args
+ */
+export const maybeCall = <F extends (...args: any[]) => void>(callback: F | undefined, ...args: Parameters<F>): void => {
+    if (callback !== undefined) {
+        callback(...args);
+    }
+}
+
+/**
  * @template T - the type of the resolved Promise
  * @param {Promise<T>} promise
  * @param {Callback<T>} callback
  * @return {Promise<any>}
  */
-export default function callCallback<T>(promise: Promise<T>, callback: Callback<T>): Promise<T | any> {
+const callCallback = async <T>(promise: Promise<T>, callback?: Callback<T>): Promise<T> => {
     if (callback) {
-        promise
+        return promise
             .then((result) => {
                 callback(undefined, result);
                 return result;
@@ -32,3 +43,15 @@ export default function callCallback<T>(promise: Promise<T>, callback: Callback<
     }
     return promise;
 }
+/*
+ try {
+        const result = await promise;
+        maybeCall(callback, undefined, result);
+        return result;
+    } catch (error) {
+        maybeCall(callback, error);
+        return undefined;
+    }
+ */
+
+export default callCallback;

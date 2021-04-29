@@ -1,7 +1,9 @@
 import * as tf from '@tensorflow/tfjs';
+import {LayersModel} from '@tensorflow/tfjs';
 import axios from "axios";
 import callCallback, {Callback} from '../utils/callcallback';
 import modelLoader from '../utils/modelLoader';
+import {loadFile} from "../utils/io";
 
 /**
  * Initializes the Sentiment demo.
@@ -10,135 +12,135 @@ import modelLoader from '../utils/modelLoader';
 const OOV_CHAR = 2;
 const PAD_CHAR = 0;
 
+/**
+ * Helper function for preparing data
+ *
+ * @param sequences
+ * @param maxLen
+ * @param padding
+ * @param truncating
+ * @param value
+ */
 function padSequences(sequences: number[][], maxLen: number, padding: string = 'pre', truncating: string = 'pre', value: number = PAD_CHAR): number[][] {
-  return sequences.map((seq) => {
-    // Perform truncation.
-    if (seq.length > maxLen) {
-      if (truncating === 'pre') {
-        seq.splice(0, seq.length - maxLen);
-      } else {
-        seq.splice(maxLen, seq.length - maxLen);
-      }
-    }
-    // Perform padding.
-    if (seq.length < maxLen) {
-      const pad = [];
-      for (let i = 0; i < maxLen - seq.length; i += 1) {
-        pad.push(value);
-      }
-      if (padding === 'pre') {
-        // eslint-disable-next-line no-param-reassign
-        seq = pad.concat(seq);
-      } else {
-        // eslint-disable-next-line no-param-reassign
-        seq = seq.concat(pad);
-      }
-    }
-    return seq;
-  });
-}
-
-class Sentiment {
-  public ready: boolean = false;
-  public model?: tf.LayersModel;
-  private indexFrom?: number;
-  private maxLen?: number;
-  private wordIndex?: Record<string, number>;
-  private vocabularySize?: number;
-
-  /**
-   * Create Sentiment model. Currently the supported model name is 'moviereviews'. ml5 may support different models in the future.
-   * @param {String} modelName - A string to the path of the JSON model.
-   * @param {function} callback - Optional. A callback function that is called once the model has loaded. If no callback is provided, it will return a promise that will be resolved once the model has loaded.
-   */
-  constructor(modelName: string, callback?: Callback<Sentiment>) {
-  /**
-   * Boolean value that specifies if the model has loaded.
-   * @type {boolean}
-   * @public
-   */
-  this.ready = callCallback(this.loadModel(modelName), callback);
-}
-
-/**
- * Initializes the Sentiment demo.
- */
-
-async loadModel(modelName: string): Promise<Sentiment> {
-
-  const movieReviews = {
-    model: null,
-    metadata: null,
-  }
-
-  if (modelName.toLowerCase() === 'moviereviews') {
-
-  movieReviews.model = 'https://storage.googleapis.com/tfjs-models/tfjs/sentiment_cnn_v1/model.json';
-  movieReviews.metadata = 'https://storage.googleapis.com/tfjs-models/tfjs/sentiment_cnn_v1/metadata.json';
-
-} else if(modelLoader.isAbsoluteURL(modelName) === true ) {
-  const modelPath = modelLoader.getModelPath(modelName);
-
-  movieReviews.model = `${modelPath}/model.json`;
-  movieReviews.metadata = `${modelPath}/metadata.json`;
-
-} else {
-  console.error('problem loading model');
-  return this;
+    return sequences.map((seq) => {
+        // Perform truncation.
+        if (seq.length > maxLen) {
+            if (truncating === 'pre') {
+                seq.splice(0, seq.length - maxLen);
+            } else {
+                seq.splice(maxLen, seq.length - maxLen);
+            }
+        }
+        // Perform padding.
+        if (seq.length < maxLen) {
+            const pad = [];
+            for (let i = 0; i < maxLen - seq.length; i += 1) {
+                pad.push(value);
+            }
+            if (padding === 'pre') {
+                // eslint-disable-next-line no-param-reassign
+                seq = pad.concat(seq);
+            } else {
+                // eslint-disable-next-line no-param-reassign
+                seq = seq.concat(pad);
+            }
+        }
+        return seq;
+    });
 }
 
 
 /**
- * The model being used.
- * @type {model}
- * @public
+ * Expected format for the metadata.json file
  */
-this.model = await tf.loadLayersModel(movieReviews.model);
-const metadataJson = await axios.get(movieReviews.metadata);
-const sentimentMetadata = metadataJson.data;
-
-this.indexFrom = sentimentMetadata.index_from;
-this.maxLen = sentimentMetadata.max_len;
-
-this.wordIndex = sentimentMetadata.word_index;
-this.vocabularySize = sentimentMetadata.vocabulary_size;
-
-return this;
+interface MetaData {
+    // used in model
+    index_from: number;
+    max_len: number;
+    word_index: Record<string, number>;
+    vocabulary_size: number;
+    // present in movieReviews metadata.json but not used
+    epochs?: number;
+    embedding_size?: number;
+    model_type?: string;
+    batch_size?: number;
 }
 
 /**
- * Scores the sentiment of given text with a value between 0 ("negative") and 1 ("positive").
- * @param {String} text - string of text to predict.
- * @returns {{score: Number}}
+ * Fully loaded model.
  */
-predict(text: string): {score: number} {
-  // Convert to lower case and remove all punctuations.
-  const inputText =
-      text.trim().toLowerCase().replace(/[.,?!]/g, '').split(' ');
-  // Convert the words to a sequence of word indices.
-
-  const sequence = inputText.map((word) => {
-    let wordIndex = this.wordIndex[word] + this.indexFrom;
-    if (wordIndex > this.vocabularySize) {
-      wordIndex = OOV_CHAR;
+class SentimentModel {
+    constructor(public readonly model: LayersModel, public readonly config: MetaData) {
     }
-    return wordIndex;
-  });
 
-  // Perform truncation and padding.
-  const paddedSequence = padSequences([sequence], this.maxLen);
-  const input = tf.tensor2d(paddedSequence, [1, this.maxLen]);
-  const predictOut = this.model.predict(input) as tf.Tensor;
-  const score = predictOut.dataSync()[0];
-  predictOut.dispose();
-  input.dispose();
+    /**
+     * Scores the sentiment of given text with a value between 0 ("negative") and 1 ("positive").
+     * @param {string} text - string of text to predict.
+     * @returns {{score: number}}
+     */
+    predict(text: string): { score: number } {
+        const {word_index, index_from, max_len, vocabulary_size} = this.config;
 
-  return {
-    score
-  };
+        // Convert to lower case and remove all punctuations.
+        const inputWords =
+            text.trim().toLowerCase().replace(/[.,?!]/g, '').split(' ');
+
+        // Convert the words to a sequence of word indices.
+        const sequence = inputWords.map((word) => {
+            let wordIndex = word_index[word] + index_from;
+            if (wordIndex > vocabulary_size) {
+                wordIndex = OOV_CHAR;
+            }
+            return wordIndex;
+        });
+
+        // Perform truncation and padding.
+        const paddedSequence = padSequences([sequence], max_len);
+        const input = tf.tensor2d(paddedSequence, [1, max_len]);
+        const predictOut = this.model.predict(input) as tf.Tensor;
+        const score = predictOut.dataSync()[0];
+        predictOut.dispose();
+        input.dispose();
+
+        return {
+            score
+        };
+    }
+
 }
+
+/**
+ * Asynchronously load the Sentiment model.
+ *
+ * @param {string} modelName
+ * @return {Promise<SentimentModel>}
+ */
+const loadSentimentModel = async (modelName: string): Promise<SentimentModel> => {
+    let directory: string;
+    if (modelName.toLowerCase() === 'moviereviews') {
+        directory = 'https://storage.googleapis.com/tfjs-models/tfjs/sentiment_cnn_v1';
+    }
+    // TODO: review/create logic for calling with custom model file path
+    // current logic supports passing the name of a directory with a model.json and a metadata.json
+    else if (modelLoader.isAbsoluteURL(modelName) === true) {
+        directory = modelLoader.getModelPath(modelName);
+    } else {
+        throw new Error(`${modelName} is not a valid model name or path.`);
+    }
+
+    const model = await tf.loadLayersModel(`${directory}/model.json`);
+    const metadata = await loadFile<MetaData>(`${directory}/metadata.json`);
+
+    return new SentimentModel(model, metadata);
 }
 
-const sentiment = (modelName: string, callback: Callback<Sentiment>): Sentiment => new Sentiment(modelName, callback);
+/**
+ * Create Sentiment model. Currently the supported model name is 'moviereviews'. ml5 may support different models in the future.
+ * @param {string} modelName - A string to the path of the JSON model.
+ * @param {function} [callback] - Optional. A callback function that is called once the model has loaded.
+ * If no callback is provided, it will return a promise that will be resolved once the model has loaded.
+ */
+const sentiment = (modelName: string, callback: Callback<SentimentModel>): Promise<SentimentModel> =>
+    callCallback(loadSentimentModel(modelName), callback);
 
 export default sentiment;

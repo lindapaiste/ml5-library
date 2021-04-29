@@ -1,8 +1,22 @@
-// import * as tf from '@tensorflow/tfjs';
+import * as tf from '@tensorflow/tfjs';
 import * as tfvis from "@tensorflow/tfjs-vis";
 // https://js.tensorflow.org/api_vis/latest/#render.barchart
 
+type Options = tfvis.BarChartOpts & tfvis.XYPlotOptions;
+
+const SCATTER_DEFAULTS: Options = {
+  xLabel: "X",
+  yLabel: "Y",
+}
+
+const BAR_DEFAULTS: Options = {
+  xLabel: "label",
+  yLabel: "value",
+}
+
 class NeuralNetworkVis {
+  config: {height: number};
+
   constructor() {
     // TODO:
     this.config = {
@@ -11,9 +25,9 @@ class NeuralNetworkVis {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  modelSummary(_options, _model) {
+  modelSummary(_options: tfvis.Drawable, _model: tf.LayersModel): Promise<void> {
     const options = { ..._options };
-    tfvis.show.modelSummary(options, _model);
+    return tfvis.show.modelSummary(options, _model);
   }
 
   /**
@@ -22,7 +36,7 @@ class NeuralNetworkVis {
    * @param {*} outputLabel
    * @param {*} data
    */
-  scatterplot(inputLabel, outputLabel, data) {
+  scatterplot(inputLabel: string, outputLabel: string, data): Promise<void> {
     const values = data.map(item => {
       return {
         x: item.xs[inputLabel],
@@ -48,7 +62,7 @@ class NeuralNetworkVis {
    * @param {*} outputLabels
    * @param {*} data
    */
-  scatterplotAll(inputLabels, outputLabels, data) {
+  scatterplotAll(inputLabels, outputLabels, data): Promise<void> {
     let values = [];
 
     inputLabels.forEach(inputLabel => {
@@ -83,7 +97,7 @@ class NeuralNetworkVis {
    * @param {*} outputLabel
    * @param {*} data
    */
-  barchart(inputLabel, outputLabel, data) {
+  barchart(inputLabel, outputLabel, data): Promise<void> {
     const values = data.map(item => {
       return {
         value: item.xs[inputLabel],
@@ -102,7 +116,7 @@ class NeuralNetworkVis {
     const surface = {
       name: "Bar chart",
     };
-    tfvis.render.barchart(surface, values);
+    return tfvis.render.barchart(surface, values);
   }
 
   /**

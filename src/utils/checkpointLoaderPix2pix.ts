@@ -2,16 +2,21 @@
 
 import * as tf from '@tensorflow/tfjs';
 
+// TODO: modernize code
+
 export default class CheckpointLoaderPix2pix {
-  constructor(urlPath) {
+  private readonly urlPath: string;
+  private weightsCache: Record<string | number, tf.Tensor> | null;
+
+  constructor(urlPath: string) {
     this.urlPath = urlPath;
+    this.weightsCache = null;
   }
 
-  getAllVariables() {
+  getAllVariables(): Promise<Record<string | number, tf.Tensor>> {
     return new Promise((resolve, reject) => {
-      const weightsCache = {};
-      if (this.urlPath in weightsCache) {
-        resolve(weightsCache[this.urlPath]);
+      if (this.weightsCache !== null) {
+        resolve(this.weightsCache);
         return;
       }
 
@@ -23,13 +28,13 @@ export default class CheckpointLoaderPix2pix {
           reject(new Error('missing model'));
           return;
         }
-        const buf = xhr.response;
+        const buf: ArrayBuffer = xhr.response;
         if (!buf) {
           reject(new Error('invalid arraybuffer'));
           return;
         }
 
-        const parts = [];
+        const parts: ArrayBuffer[] = [];
         let offset = 0;
         while (offset < buf.byteLength) {
           const b = new Uint8Array(buf.slice(offset, offset + 4));
@@ -39,7 +44,7 @@ export default class CheckpointLoaderPix2pix {
           offset += len;
         }
 
-        const shapes = JSON.parse((new TextDecoder('utf8')).decode(parts[0]));
+        const shapes: ({name: string; shape: number[];})[] = JSON.parse((new TextDecoder('utf8')).decode(parts[0]));
         const index = new Float32Array(parts[1]);
         const encoded = new Uint8Array(parts[2]);
 
@@ -49,7 +54,7 @@ export default class CheckpointLoaderPix2pix {
           arr[i] = index[encoded[i]];
         }
 
-        const weights = {};
+        const weights: Record<string | number, tf.Tensor> = {};
         offset = 0;
         for (let i = 0; i < shapes.length; i += 1) {
           const { shape } = shapes[i];
@@ -59,7 +64,7 @@ export default class CheckpointLoaderPix2pix {
           weights[shapes[i].name] = tfarr.reshape(shape);
           offset += size;
         }
-        weightsCache[this.urlPath] = weights;
+        this.weightsCache = weights;
         resolve(weights);
       };
       xhr.send(null);

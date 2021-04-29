@@ -2,14 +2,11 @@
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
-// Copyright (c) 2018 ml5
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
 
 import * as tf from '@tensorflow/tfjs';
-import {Graphics} from 'p5';
-import p5Utils from './p5Utils';
+import {Dimensions, getHeight, getWidth, HasDimensions} from "./dimensions";
+import {Tensor} from "@tensorflow/tfjs";
+import {Tensor3D} from "@tensorflow/tfjs-core";
 
 /**
  * A union of element types which can be used as sources
@@ -33,15 +30,17 @@ export type TfImageSource = MediaElement | tf.Tensor3D | ImageData;
  * @property {HTMLCanvasElement} [canvas]
  */
 export interface P5Element {
-  elt?: TfImageSource;
-  canvas?: HTMLCanvasElement;
+  elt: TfImageSource;
+}
+export interface P5Image {
+  canvas: HTMLCanvasElement;
 }
 
 /**
  * A source can be a valid element or a p5 image which contains an element
  * @typedef {(TfImageSource | P5Element)} ImageArg
  */
-export type ImageArg = TfImageSource | P5Element;
+export type ImageArg = TfImageSource | P5Element | P5Image;
 /*export type ImageArg = TfImageSource | {
   elt: MediaElement;
 } | {
@@ -54,16 +53,6 @@ export type ImageArg = TfImageSource | P5Element;
  */
 export type VideoArg = HTMLVideoElement | {
   elt: HTMLVideoElement;
-}
-
-/**
- * @typedef {Object} Dimensions
- * @property {number} width
- * @property {number} height
- */
-export interface Dimensions {
-  width: number;
-  height: number;
 }
 
 /**
@@ -130,47 +119,6 @@ export const extractVideoElement = (subject: any): HTMLVideoElement | undefined 
 }
 
 /**
- * extract an object with `width` and `height` properties
- *
- * @param {TfImageSource | Dimensions} subject
- * @return {Dimensions}
- */
-export const dimensions = (subject: TfImageSource | Dimensions): Dimensions => {
-  // note: technically this condition is unnecessary,
-  // as other elements do not have `videoWidth` and will correctly fallback to `width`
-  if (subject instanceof HTMLVideoElement) {
-    return {
-      width: subject.videoWidth ?? subject.width,
-      height: subject.videoHeight ?? subject.height,
-    }
-  } else {
-    return {
-      width: subject.width,
-      height: subject.height
-    }
-  }
-}
-
-/**
- * Helper function returns a `data` source along with `width` and `height`
- *
- * @param subject
- * @return {ImageWithSize}
- * @throws {Error}
- */
-export const extractElementWithSize = (subject: any): ImageWithSize => {
-  const element = extractImageElement(subject);
-  if ( element ) {
-    return {
-      ...dimensions(element),
-      data: element,
-    }
-  }
-  throw new Error("Unsupported source");
-}
-
-
-/**
  * Resize video elements
  *
  * @param videoInput {HTMLCanvasElement}
@@ -193,41 +141,6 @@ export const processVideo = (videoInput: HTMLCanvasElement, size: number, callba
 };
 
 /**
- * Converts a tf to DOM img
- *
- * @param tensor {tf.Tensor<tf.Rank.R3>}
- * @return {HTMLImageElement}
- */
-export const array3DToImage = (tensor: tf.Tensor<tf.Rank.R3>): HTMLImageElement => {
-  const [imgHeight, imgWidth] = tensor.shape;
-  const data = tensor.dataSync();
-  const canvas = document.createElement('canvas');
-  canvas.width = imgWidth;
-  canvas.height = imgHeight;
-  const ctx = canvas.getContext('2d');
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-  for (let i = 0; i < imgWidth * imgHeight; i += 1) {
-    const j = i * 4;
-    const k = i * 3;
-    imageData.data[j + 0] = Math.floor(256 * data[k + 0]);
-    imageData.data[j + 1] = Math.floor(256 * data[k + 1]);
-    imageData.data[j + 2] = Math.floor(256 * data[k + 2]);
-    imageData.data[j + 3] = 255;
-  }
-  ctx.putImageData(imageData, 0, 0);
-
-  // Create img HTML element from canvas
-  const dataUrl = canvas.toDataURL();
-  const outputImg = document.createElement('img');
-  outputImg.src = dataUrl;
-  outputImg.width = imgWidth;
-  outputImg.height = imgHeight;
-  tensor.dispose();
-  return outputImg;
-};
-
-/**
  * Apply cropping to a TensorFlow image based on the `shape` property
  *
  * @param {tf.Tensor<tf.Rank.R3>} img
@@ -242,68 +155,10 @@ export const cropImage = (img: tf.Tensor<tf.Rank.R3>): tf.Tensor<tf.Rank.R3> => 
   return img.slice([beginHeight, beginWidth, 0], [size, size, 3]);
 };
 
-export const flipImage = (img) => {
-  // image image, bitmap, or canvas
-  let imgWidth;
-  let imgHeight;
-  let inputImg;
-
-  if (img instanceof HTMLImageElement ||
-      img instanceof HTMLCanvasElement ||
-      img instanceof HTMLVideoElement ||
-      img instanceof ImageData) {
-    inputImg = img;
-  } else if (typeof img === 'object' &&
-      (img.elt instanceof HTMLImageElement ||
-          img.elt instanceof HTMLCanvasElement ||
-          img.elt instanceof HTMLVideoElement ||
-          img.elt instanceof ImageData)) {
-
-    inputImg = img.elt; // Handle p5.js image
-  } else if (typeof img === 'object' &&
-      img.canvas instanceof HTMLCanvasElement) {
-    inputImg = img.canvas; // Handle p5.js image
-  } else {
-    inputImg = img;
-  }
-
-  if (inputImg instanceof HTMLVideoElement) {
-    // should be videoWidth, videoHeight?
-    imgWidth = inputImg.width;
-    imgHeight = inputImg.height;
-  } else {
-    imgWidth = inputImg.width;
-    imgHeight = inputImg.height;
-  }
-
-
-  if (p5Utils.checkP5()) {
-    const p5Canvas: Graphics = p5Utils.p5Instance.createGraphics(imgWidth, imgHeight);
-    p5Canvas.push()
-    p5Canvas.translate(imgWidth, 0);
-    p5Canvas.scale(-1, 1);
-    p5Canvas.image(img, 0, 0, imgWidth, imgHeight);
-    p5Canvas.pop()
-
-    return p5Canvas;
-  }
-  const canvas = document.createElement('canvas');
-  canvas.width = imgWidth;
-  canvas.height = imgHeight;
-
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(inputImg, 0, 0, imgWidth, imgHeight);
-  ctx.translate(imgWidth, 0);
-  ctx.scale(-1, 1);
-  ctx.drawImage(canvas, imgWidth * -1, 0, imgWidth, imgHeight);
-  return canvas;
-
-}
-
 // Static Method: image to tf tensor
-export function imgToTensor(input, size = null) {
+export function imgToTensor(input: TfImageSource, size: [number, number]): Tensor3D {
   return tf.tidy(() => {
-    let img = tf.browser.fromPixels(input);
+    let img = input instanceof Tensor ? input : tf.browser.fromPixels(input);
     if (size) {
       img = tf.image.resizeBilinear(img, size);
     }
@@ -313,65 +168,30 @@ export function imgToTensor(input, size = null) {
   });
 }
 
+
 /**
  * Create a new `canvas` element with the provided dimensions
- *
- * @param {Dimensions} dimensions
- * @param {number} width
- * @param {number} height
- * @return HTMLCanvasElement
  */
-export const createCanvas = ({width, height}: Dimensions): HTMLCanvasElement => {
+export const createSizedCanvas = (object: HasDimensions): HTMLCanvasElement => {
   const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = getWidth(object);
+  canvas.height = getHeight(object);
   return canvas;
 }
 
 /**
- * Create a new `canvas` element and use `drawImage` to copy the contents from a source
- *
- * @param {CanvasImageSource} source
- * @return {CanvasRenderingContext2D}
+ * Helper function throws an Error when ctx is null, so the returned value is guaranteed to not be null.
+ * @param canvas
+ * @throws
  */
-export const copyToCanvas = (source: CanvasImageSource & Dimensions): CanvasRenderingContext2D => {
-  // TODO: should videos use videoWidth?
-  const canvas = createCanvas(dimensions(source));
-
+export const getCtx = (canvas: HTMLCanvasElement): CanvasRenderingContext2D => {
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(source, 0, 0, source.width, source.height);
-  return ctx;
-  // TODO: do I ever want to return the canvas?
-}
-
-/**
- * convert an element source to an array of pixel data
- *
- * @param {ImageArg} source
- * @return {Uint8ClampedArray}
- */
-export function imgToPixelArray(source: ImageArg): Uint8ClampedArray {
-  const data = extractElementWithSize(source);
-
-  //TODO: throw error here or in parent?
-  if ( ! data ) {
-    throw new Error("Unsupported source");
+  if (!ctx) {
+    throw new Error("Error extracting rendering context from canvas element");
   }
-
-  // TODO: ImageData is valid as a source for most applications, but not here
-  const ctx = copyToCanvas(source);
-  const canvas = document.createElement('canvas');
-  canvas.width = imgWidth;
-  canvas.height = imgHeight;
-
-
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(inputImg, 0, 0, imgWidth, imgHeight);
-
-  const imgData = ctx.getImageData(0,0, imgWidth, imgHeight)
-  // note: previous version cast to number[] with `return Array.from(imgData.data)`
-  return Array.from(imgData.data)
+  return ctx;
 }
+
 /*
 export {
   array3DToImage,
@@ -383,3 +203,20 @@ export {
   imgToPixelArray
 };
 */
+
+// probably not needed
+function dataURLtoBlob(dataurl: string): Blob {
+  const arr = dataurl.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+
+  while (n) {
+    u8arr[n] = bstr.charCodeAt(n);
+    n -= 1;
+  }
+  return new Blob([u8arr], {
+    type: mime
+  });
+}

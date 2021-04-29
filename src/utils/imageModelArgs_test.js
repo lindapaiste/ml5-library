@@ -1,4 +1,4 @@
-import {ImageModelArgs} from "./imageModelArgs";
+import {ArgSeparator} from "./argSeparator";
 
 describe("ImageModelArgs", () => {
 
@@ -17,19 +17,19 @@ describe("ImageModelArgs", () => {
     const callback = () => {}
 
     it("can separate arguments", () => {
-        const a = new ImageModelArgs(video, callback);
+        const a = new ArgSeparator(video, callback);
         expect(a.options).toBeUndefined();
         expect(a.video).toBe(video);
         expect(a.callback).toBe(callback);
         expect(a.image).toBe(video);
 
-        const b = new ImageModelArgs(options);
+        const b = new ArgSeparator(options);
         expect(b.video).toBeUndefined();
         expect(b.options).toBe(options);
         expect(b.callback).toBeUndefined();
         expect(b.image).toBeUndefined();
 
-        const c = new ImageModelArgs(image);
+        const c = new ArgSeparator(image);
         expect(c.video).toBeUndefined();
         expect(c.image).toBe(image);
     });
