@@ -10,8 +10,6 @@ A piano using pitch Detection with CREPE
 
 // Pitch variables
 let pitch;
-let audioContext;
-let audioStream;
 
 // Keyboard variables
 const cornerCoords = [10, 40];
@@ -21,7 +19,8 @@ const keyRatio = 0.58;
 const scale = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 let currentNote = "";
 
-let canvas, ctx;
+let canvas;
+let ctx;
 
 const width = 640;
 const height = 480;
@@ -29,21 +28,15 @@ const height = 480;
 // taken from p5.Sound
 function freqToMidi(f) {
   const mathlog2 = Math.log(f / 440) / Math.log(2);
-  const m = Math.round(12 * mathlog2) + 69;
-  return m;
-}
-
-function map(n, start1, stop1, start2, stop2) {
-  const newval = ((n - start1) / (stop1 - start1)) * (stop2 - start2) + start2;
-  return newval;
+  return Math.round(12 * mathlog2) + 69;
 }
 
 async function setup() {
   canvas = document.querySelector("#myCanvas");
   ctx = canvas.getContext("2d");
 
-  audioContext = new AudioContext();
-  stream = await navigator.mediaDevices.getUserMedia({
+  const audioContext = new AudioContext();
+  const stream = await navigator.mediaDevices.getUserMedia({
     audio: true,
     video: false,
   });
@@ -63,7 +56,7 @@ function modelLoaded() {
 }
 
 function getPitch() {
-  pitch.getPitch(function(err, frequency) {
+  pitch.getPitch((err, frequency) => {
     if (frequency) {
       const midiNum = freqToMidi(frequency);
       currentNote = scale[midiNum % 12];

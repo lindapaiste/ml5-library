@@ -18,8 +18,6 @@ let video;
 // Two variable to hold the label and confidence of the result
 let label;
 let confidence;
-let canvas;
-let ctx;
 
 const width = 280;
 const height = 280;
@@ -72,9 +70,8 @@ async function getVideo(){
   document.body.appendChild(videoElement);
 
   // Create a webcam capture
-  const capture = await navigator.mediaDevices.getUserMedia({ video: true })
-  videoElement.srcObject = capture;
-  videoElement.play();
+  videoElement.srcObject = await navigator.mediaDevices.getUserMedia({video: true});
+  await videoElement.play();
 
   return videoElement
 }

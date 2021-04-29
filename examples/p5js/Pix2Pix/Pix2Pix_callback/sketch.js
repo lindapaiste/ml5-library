@@ -87,7 +87,7 @@ function clearCanvas() {
 }
 
 function transfer() {
-  // Set isTransfering to true
+  // Set isTransferring to true
   isTransfering = true;
 
   // Update status message
@@ -102,7 +102,7 @@ function transfer() {
       console.log(err);
     }
     if (result && result.src) {
-      // Set isTransfering back to false
+      // Set isTransferring back to false
       isTransfering = false;
       // Clear output container
       outputContainer.html('');

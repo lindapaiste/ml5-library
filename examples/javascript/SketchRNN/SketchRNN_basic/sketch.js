@@ -13,12 +13,14 @@ let model;
 // Start by drawing
 let previousPen = "down";
 // Current location of drawing
-let x, y;
+let x;
+let y;
 // The current "stroke" of the drawing
 let strokePath;
 let button;
 
-let canvas, ctx;
+let canvas;
+let ctx;
 
 const width = 640;
 const height = 480;
@@ -42,11 +44,6 @@ async function setup() {
   requestAnimationFrame(draw);
 }
 setup();
-
-function modelReady() {
-  console.log("model loaded");
-  startDrawing();
-}
 
 // Reset the drawing
 function startDrawing() {
@@ -99,9 +96,9 @@ function clearCanvas() {
 }
 
 function createCanvas(w, h) {
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  document.body.appendChild(canvas);
-  return canvas;
+  const el = document.createElement("canvas");
+  el.width = w;
+  el.height = h;
+  document.body.appendChild(el);
+  return el;
 }

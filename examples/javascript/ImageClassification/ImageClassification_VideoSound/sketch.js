@@ -11,6 +11,7 @@ This example uses a callback pattern to create the classifier
 
 let classifier;
 let video;
+let myVoice;
 const width = 640;
 const height = 480;
 
@@ -78,9 +79,8 @@ async function getVideo() {
   document.body.appendChild(videoElement);
 
   // Create a webcam capture
-  const capture = await navigator.mediaDevices.getUserMedia({ video: true });
-  videoElement.srcObject = capture;
-  videoElement.play();
+  videoElement.srcObject = await navigator.mediaDevices.getUserMedia({video: true});
+  await videoElement.play();
 
   return videoElement;
 }

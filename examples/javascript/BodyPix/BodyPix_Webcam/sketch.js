@@ -1,7 +1,6 @@
 let bodypix;
-let segmentation;
 let video;
-let canvas, ctx;
+let ctx;
 const width = 480;
 const height = 360;
 
@@ -12,7 +11,8 @@ const options = {
 
 async function setup() {
   // create a canvas to draw to
-  canvas = createCanvas(width, height);
+  const canvas = createCanvas();
+  document.body.appendChild(canvas);
   ctx = canvas.getContext('2d');
   // get the video
   video = await getVideo();
@@ -21,9 +21,7 @@ async function setup() {
 }
 
 // when the dom is loaded, call make();
-window.addEventListener('DOMContentLoaded', function() {
-  setup();
-});
+window.addEventListener('DOMContentLoaded', setup);
 
 function videoReady() {
   // run the segmentation on the video, handle the results in a callback
@@ -35,10 +33,14 @@ function gotImage(err, result){
     console.log(err);
     return;
   }
-  segmentation = result;
+  // draw the video image to the canvas
   ctx.drawImage(video, 0, 0, width, height);
-  const maskBackground = imageDataToCanvas(result.raw.backgroundMask.data, result.raw.backgroundMask.width, result.raw.backgroundMask.height)
-  ctx.drawImage(maskBackground, 0, 0, width, height);
+
+  // convert the mask into a black and white image
+  const maskedBackground = imageDataToCanvas(result.raw.backgroundMask);
+
+  // draw the mask on top of the video
+  ctx.drawImage(maskedBackground, 0, 0);
     
   bodypix.segment(video, gotImage, options);
 }
@@ -54,36 +56,23 @@ async function getVideo(){
   document.body.appendChild(videoElement);
 
   // Create a webcam capture
-  const capture = await navigator.mediaDevices.getUserMedia({ video: true })
-  videoElement.srcObject = capture;
-  videoElement.play();
+  videoElement.srcObject = await navigator.mediaDevices.getUserMedia({ video: true });
+  await videoElement.play();
 
   return videoElement
 }
 
 // Convert a ImageData to a Canvas
-function imageDataToCanvas(imageData, x, y) {
-  // console.log(raws, x, y)
-  const arr = Array.from(imageData)
-  const canvas = document.createElement('canvas'); // Consider using offScreenCanvas when it is ready?
-  const ctx = canvas.getContext('2d');
+function imageDataToCanvas(imageData) {
+  const newCanvas = createCanvas();
+  const newCtx = newCanvas.getContext('2d');
+  newCtx.putImageData(imageData, 0, 0);
+  return newCtx.canvas;
+}
 
-  canvas.width = x;
-  canvas.height = y;
-
-  const imgData = ctx.createImageData(x, y);
-  const { data } = imgData;
-
-  for (let i = 0; i < x * y * 4; i += 1 ) data[i] = arr[i];
-  ctx.putImageData(imgData, 0, 0);
-
-  return ctx.canvas;
-};
-
-function createCanvas(w, h){
-  const canvas = document.createElement("canvas"); 
-  canvas.width  = w;
-  canvas.height = h;
-  document.body.appendChild(canvas);
-  return canvas;
+function createCanvas(){
+  const element = document.createElement("canvas");
+  element.width  = width;
+  element.height = height;
+  return element;
 }

@@ -37,7 +37,7 @@ function generateImage() {
 function gotImage(error, result) {
   if (error) {
     console.log(error);
-    return error;
+    return;
   }
   img = new ImageData(result.raws, 28, 28);
   const canvasElement = document.createElement("canvas");
@@ -53,19 +53,17 @@ function modelReady() {
   dropdown = document.createElement("select");
   document.body.appendChild(dropdown);
 
-  for (const label of cvae.labels) {
+  cvae.labels.forEach( label => {
     const option = document.createElement("option");
     option.value = label;
     option.text = label;
     dropdown.appendChild(option);
-  }
+  });
   generateImage();
 }
 
 // call app.map.init() once the DOM is loaded
-window.addEventListener("DOMContentLoaded", function() {
-  make();
-});
+window.addEventListener("DOMContentLoaded", make);
 
 // Helper Functions
 function createCanvas(w, h) {
