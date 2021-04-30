@@ -29,7 +29,7 @@ function modelLoaded() {
 }
 
 function getPitch() {
-  pitch.getPitch(function(err, frequency) {
+  pitch.getPitch((err, frequency) => {
     if (frequency) {
       select('#result').html(frequency);
     } else {

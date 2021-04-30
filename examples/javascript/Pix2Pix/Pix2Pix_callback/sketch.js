@@ -106,6 +106,7 @@ function mouseReleased() {
     transfer()
   }
 }
+window.addEventListener('mouseup', mouseReleased);
 
 // A function to be called when the models have loaded
 function modelLoaded() {
@@ -119,9 +120,7 @@ function modelLoaded() {
   transfer();
 
   // Attach a mousePressed event to the transfer button
-  transferBtn.addEventListener('click',() => {
-    transfer();
-  });
+  transferBtn.addEventListener('click', transfer);
 }
 
 // Draw the input image to the canvas

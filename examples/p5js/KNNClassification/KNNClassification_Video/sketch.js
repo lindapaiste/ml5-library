@@ -69,55 +69,55 @@ function classify() {
 function createButtons() {
   // When the A button is pressed, add the current frame
   // from the video with a label of "rock" to the classifier
-  buttonA = select('#addClassRock');
-  buttonA.mousePressed(function() {
+  const buttonA = select('#addClassRock');
+  buttonA.mousePressed(() => {
     addExample('Rock');
   });
 
   // When the B button is pressed, add the current frame
   // from the video with a label of "paper" to the classifier
-  buttonB = select('#addClassPaper');
-  buttonB.mousePressed(function() {
+  const buttonB = select('#addClassPaper');
+  buttonB.mousePressed(() => {
     addExample('Paper');
   });
 
   // When the C button is pressed, add the current frame
   // from the video with a label of "scissor" to the classifier
-  buttonC = select('#addClassScissor');
-  buttonC.mousePressed(function() {
+  const buttonC = select('#addClassScissor');
+  buttonC.mousePressed(() => {
     addExample('Scissor');
   });
 
   // Reset buttons
-  resetBtnA = select('#resetRock');
-  resetBtnA.mousePressed(function() {
+  const resetBtnA = select('#resetRock');
+  resetBtnA.mousePressed(() => {
     clearLabel('Rock');
   });
-	
-  resetBtnB = select('#resetPaper');
-  resetBtnB.mousePressed(function() {
+
+  const resetBtnB = select('#resetPaper');
+  resetBtnB.mousePressed(() => {
     clearLabel('Paper');
   });
-	
-  resetBtnC = select('#resetScissor');
-  resetBtnC.mousePressed(function() {
+
+  const resetBtnC = select('#resetScissor');
+  resetBtnC.mousePressed(() => {
     clearLabel('Scissor');
   });
 
   // Predict button
-  buttonPredict = select('#buttonPredict');
+  const buttonPredict = select('#buttonPredict');
   buttonPredict.mousePressed(classify);
 
   // Clear all classes button
-  buttonClearAll = select('#clearAll');
+  const buttonClearAll = select('#clearAll');
   buttonClearAll.mousePressed(clearAllLabels);
 
   // Load saved classifier dataset
-  buttonSetData = select('#load');
+  const buttonSetData = select('#load');
   buttonSetData.mousePressed(loadMyKNN);
 
   // Get classifier dataset
-  buttonGetData = select('#save');
+  const buttonGetData = select('#save');
   buttonGetData.mousePressed(saveMyKNN);
 }
 

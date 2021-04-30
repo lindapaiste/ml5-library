@@ -13,14 +13,15 @@ let model;
 // Start by drawing
 let previousPen = "down";
 // Current location of drawing
-let x, y;
+let x;
+let y;
 // The current "stroke" of the drawing
 let strokePath;
 
 // For when SketchRNN is fixed
 function preload() {
   // See a list of all supported models: https://github.com/ml5js/ml5-library/blob/master/src/SketchRNN/models.js
-  model = ml5.sketchRNN("cat");
+  model = ml5.sketchRNN("cat", modelReady);
 }
 
 function setup() {

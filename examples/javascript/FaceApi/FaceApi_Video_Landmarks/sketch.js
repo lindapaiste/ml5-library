@@ -54,11 +54,11 @@ function gotResults(err, result) {
 
 function drawBox(detections) {
   detections.forEach(detection => {
-    const {alignedRect} = detection;
-    const {_x, _y, _width, _height} = alignedRect._box;
+    // eslint-disable-next-line prefer-destructuring
+    const box = detection.alignedRect.box;
 
     ctx.beginPath();
-    ctx.rect(_x, _y, _width, _height);
+    ctx.rect(box.x, box.y, box.width, box.height);
     ctx.strokeStyle = "#a15ffb";
     ctx.stroke();
     ctx.closePath();
@@ -82,12 +82,10 @@ function drawLandmarks(detections) {
 function drawPart(feature, closed) {
   ctx.beginPath();
   feature.forEach((point, i) => {
-    const {_x, _y} = point;
-
     if (i === 0) {
-      ctx.moveTo(_x, _y);
+      ctx.moveTo(point.x, point.y);
     } else {
-      ctx.lineTo(_x, _y);
+      ctx.lineTo(point.x, point.y);
     }
   });
 

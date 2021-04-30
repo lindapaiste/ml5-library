@@ -48,14 +48,8 @@ function setup() {
 
 function addData() {
   for (let i = 0; i < 500; i += 1) {
-    let xVal, labelVal;
-    if (i < 250) {
-      xVal = i;
-      labelVal = "a";
-    } else {
-      xVal = i;
-      labelVal = "b";
-    }
+    const xVal = i;
+    const labelVal = (i < 250) ? "a" : "b";
     const yVal = floor(random(500));
 
     nn.addData(
@@ -78,7 +72,7 @@ function finishedTraining() {
       x: 0,
       y: 0.5,
     },
-    function(err, result) {
+      (err, result) => {
       if (err) {
         console.log(err);
         return;

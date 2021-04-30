@@ -51,10 +51,10 @@ function gotResults(err, result) {
 }
 
 function drawBox(detections) {
-    const {alignedRect} = detections;
-    const {_x, _y, _width, _height} = alignedRect._box;
+    // eslint-disable-next-line prefer-destructuring
+    const box = detections.alignedRect.box;
     // canvas.fillStyle = 'none';
-    ctx.rect(_x, _y, _width, _height);
+    ctx.rect(box.x, box.y, box.width, box.height)
     ctx.strokeStyle = "#a15ffb";
     ctx.stroke();
 }
@@ -73,12 +73,10 @@ function drawLandmarks(detections) {
 function drawPart(feature, closed) {
     ctx.beginPath();
     feature.forEach((point, i) => {
-        const {_x, _y} = point;
-
         if (i === 0) {
-            ctx.moveTo(_x, _y);
+            ctx.moveTo(point.x, point.y);
         } else {
-            ctx.lineTo(_x, _y);
+            ctx.lineTo(point.x, point.y);
         }
     });
 

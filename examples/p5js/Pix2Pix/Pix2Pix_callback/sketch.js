@@ -13,7 +13,15 @@ For more models see: https://github.com/ml5js/ml5-data-and-training/tree/master/
 // The pre-trained Edges2Pikachu model is trained on 256x256 images
 // So the input images can only be 256x256 or 512x512, or multiple of 256
 const SIZE = 256;
-let inputImg, inputCanvas, outputContainer, statusMsg, pix2pix, clearBtn, transferBtn, modelReady = false, isTransfering = false;
+let inputImg;
+let inputCanvas;
+let outputContainer;
+let statusMsg;
+let pix2pix;
+let clearBtn;
+let transferBtn;
+let modelReady = false;
+let isTransferring = false;
 
 function setup() {
   // Create a canvas
@@ -33,7 +41,7 @@ function setup() {
   // Select 'clear' button html element
   clearBtn = select('#clearBtn');
   // Attach a mousePressed event to the 'clear' button
-  clearBtn.mousePressed(function() {
+  clearBtn.mousePressed(() => {
     clearCanvas();
   });
 
@@ -53,8 +61,10 @@ function draw() {
 }
 
 // Whenever mouse is released, transfer the current image if the model is loaded and it's not in the process of another transformation
+// p5 global function mouseReleased
+// eslint-disable-next-line no-unused-vars
 function mouseReleased() {
-  if (modelReady && !isTransfering) {
+  if (modelReady && !isTransferring) {
     transfer()
   }
 }
@@ -71,7 +81,7 @@ function modelLoaded() {
   transfer();
 
   // Attach a mousePressed event to the transfer button
-  transferBtn.mousePressed(function() {
+  transferBtn.mousePressed(() => {
     transfer();
   });
 }
@@ -88,7 +98,7 @@ function clearCanvas() {
 
 function transfer() {
   // Set isTransferring to true
-  isTransfering = true;
+  isTransferring = true;
 
   // Update status message
   statusMsg.html('Applying Style Transfer...!');
@@ -97,13 +107,13 @@ function transfer() {
   const canvasElement = select('canvas').elt;
 
   // Apply pix2pix transformation
-  pix2pix.transfer(canvasElement, function(err, result) {
+  pix2pix.transfer(canvasElement, (err, result) => {
     if (err) {
       console.log(err);
     }
     if (result && result.src) {
       // Set isTransferring back to false
-      isTransfering = false;
+      isTransferring = false;
       // Clear output container
       outputContainer.html('');
       // Create an image based result

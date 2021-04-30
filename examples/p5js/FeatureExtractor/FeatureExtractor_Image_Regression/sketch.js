@@ -11,10 +11,10 @@ Creating a regression extracting features of MobileNet. Build with p5js.
 let featureExtractor;
 let regressor;
 let video;
-let loss;
 let slider;
 let samples = 0;
 let positionX = 140;
+let previousLoss;
 
 function setup() {
   createCanvas(340, 280);
@@ -49,43 +49,49 @@ function videoReady() {
 
 // Classify the current frame.
 function predict() {
+  // Show the results
+  function gotResults(err, result) {
+    if (err) {
+      console.error(err);
+    }
+    if (result && result.value) {
+      positionX = map(result.value, 0, 1, 0, width);
+      slider.value(result.value);
+      predict();
+    }
+  }
   regressor.predict(gotResults);
+}
+
+// When the Dog button is pressed, add the current frame
+// from the video with a label of "dog" to the classifier
+function addSample() {
+  regressor.addImage(slider.value());
+  select("#amountOfSamples").html((samples += 1));
+}
+
+function train() {
+  function handleLoss(loss) {
+    if (loss) {
+      select("#loss").html(`Loss: ${loss}`);
+      previousLoss = loss;
+    } else {
+      select("#loss").html(`Done Training! Final Loss: ${previousLoss}`);
+    }
+  }
+  regressor.train(handleLoss);
 }
 
 // A util function to create UI buttons
 function setupButtons() {
   slider = select("#slider");
-  // When the Dog button is pressed, add the current frame
-  // from the video with a label of "dog" to the classifier
-  select("#addSample").mousePressed(function() {
-    regressor.addImage(slider.value());
-    select("#amountOfSamples").html((samples += 1));
-  });
+
+  // Add Sample Button
+  select("#addSample").mousePressed(addSample);
 
   // Train Button
-  select("#train").mousePressed(function() {
-    regressor.train(function(lossValue) {
-      if (lossValue) {
-        loss = lossValue;
-        select("#loss").html(`Loss: ${loss}`);
-      } else {
-        select("#loss").html(`Done Training! Final Loss: ${loss}`);
-      }
-    });
-  });
+  select("#train").mousePressed(train);
 
   // Predict Button
   select("#buttonPredict").mousePressed(predict);
-}
-
-// Show the results
-function gotResults(err, result) {
-  if (err) {
-    console.error(err);
-  }
-  if (result && result.value) {
-    positionX = map(result.value, 0, 1, 0, width);
-    slider.value(result.value);
-    predict();
-  }
 }

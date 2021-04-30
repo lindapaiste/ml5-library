@@ -1,5 +1,6 @@
 let kmeans;
 let baseImage;
+let img;
 const data = [];
 
 const imgSize = 30;
@@ -37,8 +38,8 @@ function setup() {
       const r = img.pixels[off];
       const g = img.pixels[off + 1];
       const b = img.pixels[off + 2];
-      const a = img.pixels[off + 3];
-      // push this to the globa data[] array
+      // alpha: const a = img.pixels[off + 3];
+      // push this to the global data[] array
       data.push({
         r,
         g,
@@ -49,7 +50,7 @@ function setup() {
 
   // display the resized image on another canvas
   baseImage = select("#baseImage");
-  baseImageCtx = baseImage.elt.getContext("2d");
+  const baseImageCtx = baseImage.elt.getContext("2d");
   baseImageCtx.drawImage(img.canvas, 0, 0, width, height);
 
   // call kmeans on the data
@@ -58,7 +59,7 @@ function setup() {
 
 function modelReady() {
   console.log("ready!");
-  const dataset = kmeans.dataset;
+  const {dataset} = kmeans;
 
   const segmented = createImage(imgSize, imgSize);
   segmented.loadPixels();

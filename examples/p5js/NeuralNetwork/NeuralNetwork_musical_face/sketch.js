@@ -11,10 +11,8 @@ let faceBrain;
 
 //  Sound
 let osc;
-const freqMax = 800;
 
 // Keeping track of state
-const trained = false;
 let collecting = false;
 
 function setup() {
@@ -68,11 +66,11 @@ function draw() {
   // Just look at the first face and draw all the points
   if (detections.length > 0) {
     const points = detections[0].landmarks.positions;
-    for (let i = 0; i < points.length; i += 1) {
+    points.forEach(point => {
       stroke(161, 95, 251);
       strokeWeight(4);
-      point(points[i]._x, points[i]._y);
-    }
+      point(point.x, point.y);
+    });
   }
 
   // If Collecting  data
@@ -96,13 +94,9 @@ function getInputs() {
   // a normalized array.
   if (detections.length > 0) {
     const points = detections[0].landmarks.positions;
-    const inputs = [];
-    for (let i = 0; i < points.length; i += 1) {
-      inputs.push(points[i]._x);
-      inputs.push(points[i]._y);
-    }
-    return inputs;
-  }
+    return points.flatMap(point => [point.x, point.y]);
+  } 
+  return [];
 }
 // Start the sound and data collection
 function collectData() {
@@ -113,7 +107,7 @@ function collectData() {
 
 // Train the model
 function trainModel() {
-  // No longer collecting dataa
+  // No longer collecting data
   collecting = false;
   osc.amp(0);
 
@@ -143,7 +137,7 @@ function gotFrequency(error, outputs) {
     console.error(error);
     return;
   }
-  frequency = outputs[0].value;
+  const frequency = outputs[0].value;
   osc.freq(frequency);
   select('#prediction').html(frequency.toFixed(2));
   predict();

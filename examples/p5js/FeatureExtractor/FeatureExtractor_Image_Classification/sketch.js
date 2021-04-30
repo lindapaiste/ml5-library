@@ -52,32 +52,32 @@ function classify() {
 function setupButtons() {
   // When the Cat button is pressed, add the current frame
   // from the video with a label of "cat" to the classifier
-  buttonA = select("#catButton");
-  buttonA.mousePressed(function() {
+  const buttonA = select("#catButton");
+  buttonA.mousePressed(() => {
     classifier.addImage("cat");
     select("#amountOfCatImages").html((catImages += 1));
   });
 
   // When the Dog button is pressed, add the current frame
   // from the video with a label of "dog" to the classifier
-  buttonB = select("#dogButton");
-  buttonB.mousePressed(function() {
+  const buttonB = select("#dogButton");
+  buttonB.mousePressed(() => {
     classifier.addImage("dog");
     select("#amountOfDogImages").html((dogImages += 1));
   });
 
   // When the Dog button is pressed, add the current frame
   // from the video with a label of "dog" to the classifier
-  buttonC = select("#badgerButton");
-  buttonC.mousePressed(function() {
+  const buttonC = select("#badgerButton");
+  buttonC.mousePressed(() => {
     classifier.addImage("badger");
     select("#amountOfBadgerImages").html((badgerImages += 1));
   });
 
   // Train Button
-  train = select("#train");
-  train.mousePressed(function() {
-    classifier.train(function(lossValue) {
+  const train = select("#train");
+  train.mousePressed(() => {
+    classifier.train(lossValue => {
       if (lossValue) {
         loss = lossValue;
         select("#loss").html(`Loss: ${loss}`);
@@ -88,19 +88,19 @@ function setupButtons() {
   });
 
   // Predict Button
-  buttonPredict = select("#buttonPredict");
+  const buttonPredict = select("#buttonPredict");
   buttonPredict.mousePressed(classify);
 
   // Save model
-  saveBtn = select("#save");
-  saveBtn.mousePressed(function() {
+  const saveBtn = select("#save");
+  saveBtn.mousePressed(() => {
     classifier.save();
   });
 
   // Load model
-  loadBtn = select("#load");
-  loadBtn.changed(function() {
-    classifier.load(loadBtn.elt.files, function() {
+  const loadBtn = select("#load");
+  loadBtn.changed(() => {
+    classifier.load(loadBtn.elt.files, () => {
       select("#modelStatus").html("Custom Model Loaded!");
     });
   });

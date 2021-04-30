@@ -1,13 +1,13 @@
 let neuralNetwork;
-let submitButton;
 
-let rSlider, gSlider, bSlider;
+let rSlider;
+let gSlider;
+let bSlider;
 let labelP;
-let lossP;
 
 function setup() {
   // Crude interface
-  lossP = createP('loss');
+  createP('loss');
 
   createCanvas(100, 100);
 
@@ -38,7 +38,7 @@ function setup() {
 function modelReady() {
   console.log('model loaded!')
   classify();
-};
+}
 
 
 function classify() {

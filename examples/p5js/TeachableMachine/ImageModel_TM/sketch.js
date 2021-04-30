@@ -22,8 +22,7 @@ let label = "";
 
 // Load the model first
 function preload() {
-  // eslint-disable-next-line prefer-template
-  classifier = ml5.imageClassifier(imageModelURL + 'model.json');
+  classifier = ml5.imageClassifier(`${imageModelURL}model.json`);
 }
 
 function setup() {
@@ -65,7 +64,10 @@ function gotResult(error, results) {
   }
   // The results are in an array ordered by confidence.
   // console.log(results[0]);
+
+  // eslint-disable-next-line prefer-destructuring
   label = results[0].label;
-  // Classifiy again!
+
+  // Classify again!
   classifyVideo();
 }

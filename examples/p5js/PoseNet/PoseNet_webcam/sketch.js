@@ -44,10 +44,9 @@ function draw() {
 function drawKeypoints() {
     // Loop through all the poses detected
     poses.forEach(pose => {
-        const {keypoints} = pose.pose;
         // For each pose detected, loop through all the keypoints
         // A keypoint is an object describing a body part (like rightArm or leftShoulder)
-        keypoints.for(keypoint => {
+        pose.pose.keypoints.forEach(keypoint => {
             // Only draw an ellipse is the pose probability is bigger than 0.2
             if (keypoint.score > 0.2) {
                 fill(255, 0, 0);

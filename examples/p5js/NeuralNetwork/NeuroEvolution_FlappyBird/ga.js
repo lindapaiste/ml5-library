@@ -47,11 +47,8 @@ function pickOne() {
 
 // Normalize all fitness values
 function calculateFitness() {
-  let sum = 0;
-  for (const bird of savedBirds) {
-    sum += bird.score;
-  }
-  for (const bird of savedBirds) {
+  const sum = savedBirds.reduce((total, bird) => total + bird.score, 0);
+  savedBirds.forEach( bird => {
     bird.fitness = bird.score / sum;
-  }
+  });
 }

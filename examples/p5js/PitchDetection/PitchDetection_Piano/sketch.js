@@ -10,8 +10,8 @@ A piano using pitch Detection with CREPE
 
 // Pitch variables
 let pitch;
+let mic;
 let audioContext;
-let audioStream;
 
 // Keyboard variables
 const cornerCoords = [10, 40];
@@ -38,7 +38,7 @@ function modelLoaded() {
 }
 
 function getPitch() {
-  pitch.getPitch(function(err, frequency) {
+  pitch.getPitch((err, frequency) => {
     if (frequency) {
       const midiNum = freqToMidi(frequency);
       currentNote = scale[midiNum % 12];

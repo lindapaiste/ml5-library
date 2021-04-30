@@ -31,13 +31,13 @@ function setup(){
     epochs: 32
   }
   
-  nn.train(trainingOptions,finishedTraining); // if you want to change the training options
+  nn.train(trainingOptions, finishedTraining); // if you want to change the training options
   // nn.train(finishedTraining); // use the default training options
 }
 
 function finishedTraining(){
 
-  nn.classify([300], function(err, result){
+  nn.classify([300], (err, result) => {
     console.log(result);
   })
   
