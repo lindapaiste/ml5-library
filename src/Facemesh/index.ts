@@ -14,6 +14,7 @@ import { EventEmitter } from "events";
 import callCallback, {Callback} from "../utils/callcallback";
 import {ArgSeparator} from "../utils/argSeparator";
 import {TfImageSource} from "../utils/imageUtilities";
+import {AbstractImageVideoModel, createFactory} from "../utils/ModelWrapper";
 
 interface FacemeshOptions {
   maxContinuousChecks?: number;
@@ -98,6 +99,34 @@ class Facemesh extends EventEmitter {
     return result;
   }
 }
+
+class FacemeshNew extends AbstractImageVideoModel<facemeshCore.FaceMesh, FacemeshOptions> {
+
+  async loadModel() {
+    return await facemeshCore.load(this.config);
+  }
+
+  defaultConfig(): FacemeshOptions {
+    return {};
+  }
+
+  private async predictInternal(model: facemeshCore.FaceMesh, image: TfImageSource): Promise<facemeshCore.AnnotatedPrediction[]> {
+    const { flipHorizontal } = this.config;
+    return await model.estimateFaces(image, flipHorizontal);
+  }
+
+  // TODO: where to handle chaining for video?
+  // if (this.video) { return tf.nextFrame().then(() => this.predict()); }
+
+  public predict = this._makeImageMethod(this.predictInternal, "predict");
+}
+
+const ff = createFactory(FacemeshNew);
+
+const i = new FacemeshNew();
+
+i.predict(new Image(), console.log);
+i.predict(console.log, new Image());
 
 const facemesh = (videoOrOptionsOrCallback?: HTMLVideoElement | FacemeshOptions | Callback<Facemesh>, optionsOrCallback?: FacemeshOptions | Callback<Facemesh>, cb?: Callback<Facemesh>) => {
   const {video, options, callback} = new ArgSeparator(videoOrOptionsOrCallback, optionsOrCallback, cb);

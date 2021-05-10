@@ -119,6 +119,22 @@ export const extractVideoElement = (subject: any): HTMLVideoElement | undefined 
 }
 
 /**
+ * Async function that waits for a video to be loaded.
+ * @param video
+ */
+export const videoLoaded = async (video: HTMLVideoElement): Promise<void> => {
+  if ( video.readyState >= 2 ) {
+    return;
+  }
+  return new Promise((resolve, reject) => {
+    // Fired when the first frame of the media has finished loading.
+    video.onloadeddata = () => resolve();
+    // Fired when the resource could not be loaded due to an error.
+    video.onerror = () => reject(new Error(`Error loading media file ${video.src}`));
+  });
+}
+
+/**
  * Resize video elements
  *
  * @param videoInput {HTMLCanvasElement}

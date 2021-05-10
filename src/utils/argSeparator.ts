@@ -37,7 +37,7 @@ export interface BasicArgs {
  * @property {Object} [options]
  * @property {function} [callback]
  */
-export class ArgSeparator<Args extends any[]> {
+export class ArgSeparator<Args extends any[]> implements BasicArgs{
 
     /**
      * Strict types here mean no errors when destructuring,

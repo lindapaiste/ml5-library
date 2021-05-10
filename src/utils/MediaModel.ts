@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 import callCallback, {Callback} from "./callcallback";
-import {TfImageSource, VideoArg} from "./imageUtilities";
+import {TfImageSource, VideoArg, videoLoaded} from "./imageUtilities";
 import MediaWrapper from "./MediaWrapper";
 import {Convertible} from "./imageConversion";
 import {ArgSeparator} from "./argSeparator";
@@ -22,11 +22,12 @@ export const createClass = <Model, Options>(creatorFunction: (options: Options) 
         // for backwards compatibility, if there is a model property it should be to the inner model of the typed model
         public model?: InnerModel<Model>;
         protected instance?: Model;
-        public video?: MediaWrapper;
+        public video?: HTMLVideoElement;
 
         // all media models take the same arguments
-        constructor(video?: VideoArg, options: Partial<Options> = {}, callback?: Callback<any>) {
+        constructor(video?: HTMLVideoElement, options: Partial<Options> = {}, callback?: Callback<any>) {
             super();
+            this.video = video;
             const merged = {
                 ...defaultOptions,
                 ...options
@@ -41,7 +42,7 @@ export const createClass = <Model, Options>(creatorFunction: (options: Options) 
         }
 
         // TODO: which ones actually use options?
-        protected _makeImageMethod = <T>(innerMethod: (image: TfImageSource, options?: Partial<Options>) => Promise<T>, eventName?: string) => {
+        protected _makeImageMethod<T>(innerMethod: (image: TfImageSource, options?: Partial<Options>) => Promise<T>, eventName?: string) {
             return async (inputOrCallback?: Convertible | Callback<T>, cb?: Callback<T>): Promise<T> => {
                 const {image, callback} = new ArgSeparator(this.video, inputOrCallback, cb);
                 if (!image) {
@@ -50,7 +51,7 @@ export const createClass = <Model, Options>(creatorFunction: (options: Options) 
                 return callCallback((async () => {
                     // TODO: figure out video frame handling
                     if (image instanceof HTMLVideoElement) {
-                        await this.video?.load();
+                        await videoLoaded(image);
                         await tf.nextFrame();
                     }
                     await this.ready;

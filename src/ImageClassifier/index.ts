@@ -16,6 +16,7 @@ import * as customModel from "./customModel";
 import callCallback, {Callback} from "../utils/callcallback";
 import {imgToTensor, TfImageSource} from "../utils/imageUtilities";
 import {ArgSeparator} from "../utils/argSeparator";
+import {LabelAndConfidence, toLabelAndConfidence} from "../utils/gettopkclasses";
 
 const MOBILENET_DEFAULTS: mobilenet.ModelConfig = {
     version: 2,
@@ -32,11 +33,6 @@ interface Options {
     version?: number | string;
     alpha?: number; // used by MobileNet only
     topk: number;
-}
-
-export interface LabelAndConfidence {
-    label: string;
-    confidence: number;
 }
 
 /**
@@ -96,7 +92,7 @@ class ImageClassifier {
         processedImg.dispose();
 
         // TODO: why is this reformatted?  Might be better to keep consistency.
-        return classes.map(c => ({label: c.className, confidence: c.probability}));
+        return classes.map(toLabelAndConfidence);
     }
 
     /**

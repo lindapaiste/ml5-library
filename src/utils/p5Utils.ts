@@ -2,11 +2,23 @@
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
-import {p5InstanceExtensions} from "p5";
 import * as p5 from "p5";
+import {p5InstanceExtensions} from "p5";
+
+/**
+ * Certain properties, such as the underlying `canvas`, aren't documented because they are considered private
+ */
+export interface P5Image extends p5.Image {
+    canvas: HTMLCanvasElement;
+    imageData: ImageData;
+}
+
+export interface P5Element<T> extends p5.Element {
+    elt: T;
+}
 
 class P5Util {
-    private m_p5Instance: (Partial<p5InstanceExtensions> & {p5?: p5});
+    private m_p5Instance: (Partial<p5InstanceExtensions> & { p5?: p5 });
 
     constructor() {
         this.m_p5Instance = window;
@@ -16,7 +28,7 @@ class P5Util {
      * Set p5 instance globally.
      * @param {Object} p5Instance
      */
-    setP5Instance(p5Instance: Partial<p5InstanceExtensions> & {p5?: p5}) {
+    setP5Instance(p5Instance: Partial<p5InstanceExtensions> & { p5?: p5 }) {
         this.m_p5Instance = p5Instance;
     }
 
@@ -60,23 +72,49 @@ class P5Util {
     };
 
     /**
-     * Load image in async way.
+     * Load image in async way from a URL string.
+     * URL can be an image src or a data src.
      * @param {string} url
      * @return {Promise<p5.Image>}
      */
-    loadAsync(url: string): Promise<p5.Image> {
+    async loadAsync(url: string): Promise<P5Image> {
         return new Promise((resolve, reject) => {
-          const p5 = this.p5Instance;
-          if ( ! p5 || ! p5.loadImage ) {
-            reject(new Error("p5 not loaded"));
-          } else {
-            p5.loadImage(url,
-                (img: p5.Image) => resolve(img),
-                () => reject(new Error("Error creating p5 Image"))
-            );
-          }
+            const p5 = this.p5Instance;
+            if (!p5 || !p5.loadImage) {
+                reject(new Error("p5 not loaded"));
+            } else {
+                p5.loadImage(url,
+                    // type assertion asserts that the canvas property is present
+                    (img) => resolve(img as P5Image),
+                    () => reject(new Error("Error creating p5 Image"))
+                );
+            }
         });
     };
+
+    /**
+     * Create a p5.Image from an array of pixels, along with width and height.
+     * @param width
+     * @param height
+     * @param data
+     */
+    fromPixels({width, height, data}: ImageData): P5Image {
+        const p5 = this.p5Instance;
+        if (!p5 || !p5.createImage) {
+            throw new Error("p5 not loaded");
+        }
+        /*
+         * Before accessing the pixels of an image, the data must loaded with the loadPixels() function.
+         * After the array data has been modified, the updatePixels() function must be run to update the changes.
+         */
+        const img = p5.createImage(width, height);
+        img.loadPixels();
+        // note: cannot just overwrite the whole pixels array
+        data.forEach((value, i) => img.pixels[i] = value);
+        img.updatePixels();
+        // type assertion asserts that the canvas property is present
+        return img as P5Image;
+    }
 
     /**
      * convert raw bytes to blob object

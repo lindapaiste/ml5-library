@@ -21,7 +21,7 @@ import {
     PoseNetOutputStride,
     PoseNetQuantBytes
 } from "@tensorflow-models/posenet/dist/types";
-import {TfImageSource, VideoArg} from "../utils/imageUtilities";
+import {TfImageSource, VideoArg, videoLoaded} from "../utils/imageUtilities";
 
 /**
  * @typedef {Object} PoseNetOptions
@@ -147,11 +147,7 @@ class PoseNet extends EventEmitter implements PoseNetOptions {
         this.net = await posenet.load(this);
 
         if (this.video) {
-            if (this.video.readyState === 0) {
-                await new Promise<void>((resolve) => {
-                    this.video!.onloadeddata = () => resolve();
-                });
-            }
+            await videoLoaded(this.video);
             this.pose(this.detectionType);
         }
         return this;

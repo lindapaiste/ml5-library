@@ -10,7 +10,7 @@ This version is based on alantian's TensorFlow.js implementation: https://github
 
 import * as tf from '@tensorflow/tfjs';
 import callCallback, {Callback} from '../utils/callcallback';
-import modelLoader from "../utils/modelLoader";
+import modelLoader, {isAbsoluteURL} from "../utils/modelLoader";
 import {GeneratedImageResult, generatedImageResult} from "../utils/GeneratedImage";
 import {ArgSeparator} from "../utils/argSeparator";
 import {loadFile} from "../utils/io";
@@ -59,30 +59,21 @@ class DCGANBase {
 
     /**
      * Load the model and set it to this.model
-     * @param {string} modelPath
+     * @param {string} manifestPath
      * @return {this} the dcgan.
      */
-    async loadModel(modelPath: string): Promise<this> {
-        this.modelInfo = await loadFile<ModelInfo>(modelPath);
+    async loadModel(manifestPath: string): Promise<this> {
+        // loads the manifest.json, which contains the relative path to the model.json.
+        this.modelInfo = await loadFile<ModelInfo>(manifestPath);
 
-        const [modelUrl] = modelPath.split('manifest.json');
-        // TODO: previous code made no sense -- what is intended to be the base here?
-        const modelJsonPath = modelLoader.isAbsoluteURL(modelUrl) ? this.modelInfo.model : modelUrl + this.modelInfo.model
+        // maybe append the model path to the location of the manifest.
+        const manifestLoader = modelLoader(manifestPath);
+        const modelPath = this.modelInfo.model;
+        const modelJsonPath = isAbsoluteURL(modelPath) ? modelPath : manifestLoader.fileInDirectory(modelPath);
 
         this.model = await tf.loadLayersModel(modelJsonPath);
         this.modelReady = true;
         return this;
-    }
-
-    /**
-     * Generates a new image
-     * @param {function} callback - a callback function handle the results of generate
-     * @param {object} latentVector - an array containing the latent vector; otherwise use random vector
-     * @return {object} a promise or the result of the callback function.
-     */
-    async generate(callback: Callback<GeneratedImageResult>, latentVector?: number[]): Promise<GeneratedImageResult> {
-        await this.ready;
-        return callCallback(this.generateInternal(latentVector), callback);
     }
 
     /**
@@ -108,6 +99,17 @@ class DCGANBase {
             return (this.model!.predict(z) as tf.Tensor).squeeze().transpose([1, 2, 0])
                 .div(tf.scalar(2)).add<tf.Tensor3D>(tf.scalar(0.5));
         });
+    }
+
+    /**
+     * Generates a new image
+     * @param {function} callback - a callback function handle the results of generate
+     * @param {object} latentVector - an array containing the latent vector; otherwise use random vector
+     * @return {object} a promise or the result of the callback function.
+     */
+    async generate(callback: Callback<GeneratedImageResult>, latentVector?: number[]): Promise<GeneratedImageResult> {
+        await this.ready;
+        return callCallback(this.generateInternal(latentVector), callback);
     }
 
     /**

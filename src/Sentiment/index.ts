@@ -1,6 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
 import {LayersModel} from '@tensorflow/tfjs';
-import axios from "axios";
 import callCallback, {Callback} from '../utils/callcallback';
 import modelLoader from '../utils/modelLoader';
 import {loadFile} from "../utils/io";
@@ -116,20 +115,19 @@ class SentimentModel {
  * @return {Promise<SentimentModel>}
  */
 const loadSentimentModel = async (modelName: string): Promise<SentimentModel> => {
-    let directory: string;
+    let directory = modelName;
     if (modelName.toLowerCase() === 'moviereviews') {
         directory = 'https://storage.googleapis.com/tfjs-models/tfjs/sentiment_cnn_v1';
     }
     // TODO: review/create logic for calling with custom model file path
-    // current logic supports passing the name of a directory with a model.json and a metadata.json
-    else if (modelLoader.isAbsoluteURL(modelName) === true) {
-        directory = modelLoader.getModelPath(modelName);
-    } else {
-        throw new Error(`${modelName} is not a valid model name or path.`);
-    }
+    // Current logic supports passing the name of a directory with a model.json and a metadata.json
+    // Or a path to a model.json which has a metadata.json in the same directory.
+    const loader = modelLoader(directory);
+    const modelUrl = loader.modelJsonPath();
+    //throw new Error(`${modelName} is not a valid model name or path.`);
 
-    const model = await tf.loadLayersModel(`${directory}/model.json`);
-    const metadata = await loadFile<MetaData>(`${directory}/metadata.json`);
+    const model = await tf.loadLayersModel(modelUrl);
+    const metadata = await loadFile<MetaData>(loader.fileInDirectory("metadata.json"));
 
     return new SentimentModel(model, metadata);
 }

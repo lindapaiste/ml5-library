@@ -1,8 +1,12 @@
 import * as tf from '@tensorflow/tfjs';
 import * as tfvis from "@tensorflow/tfjs-vis";
+import {RawData, XsOrYs} from "./NeuralNetworkData";
+import {Point2D} from "@tensorflow/tfjs-vis";
 // https://js.tensorflow.org/api_vis/latest/#render.barchart
 
 type Options = tfvis.BarChartOpts & tfvis.XYPlotOptions;
+
+type NumericData = Array<Record<XsOrYs, Record<string, number>>>;
 
 const SCATTER_DEFAULTS: Options = {
   xLabel: "X",
@@ -36,7 +40,7 @@ class NeuralNetworkVis {
    * @param {*} outputLabel
    * @param {*} data
    */
-  scatterplot(inputLabel: string, outputLabel: string, data): Promise<void> {
+  scatterplot(inputLabel: string, outputLabel: string, data: NumericData): Promise<void> {
     const values = data.map(item => {
       return {
         x: item.xs[inputLabel],
@@ -53,7 +57,7 @@ class NeuralNetworkVis {
       height: this.config.height,
     };
 
-    tfvis.render.scatterplot(visOptions, values, chartOptions);
+    return tfvis.render.scatterplot(visOptions, {values}, chartOptions);
   }
 
   /**
@@ -62,21 +66,16 @@ class NeuralNetworkVis {
    * @param {*} outputLabels
    * @param {*} data
    */
-  scatterplotAll(inputLabels, outputLabels, data): Promise<void> {
-    let values = [];
-
-    inputLabels.forEach(inputLabel => {
-      outputLabels.forEach(outputLabel => {
-        const val = data.map(item => {
-          return {
+  scatterplotAll(inputLabels: string[], outputLabels: string[], data: NumericData): Promise<void> {
+   const values = inputLabels.flatMap(inputLabel =>
+      outputLabels.flatMap(outputLabel =>
+          data.map(item => ({
             x: item.xs[inputLabel],
             y: item.ys[outputLabel],
-          };
-        });
-
-        values = [...values, ...val];
-      });
-    });
+          })
+        )
+      )
+    );
 
     const visOptions = {
       name: "debug mode",
@@ -88,7 +87,7 @@ class NeuralNetworkVis {
       height: this.config.height,
     };
 
-    tfvis.render.scatterplot(visOptions, values, chartOptions);
+    return tfvis.render.scatterplot(visOptions, {values}, chartOptions);
   }
 
   /**
@@ -97,7 +96,7 @@ class NeuralNetworkVis {
    * @param {*} outputLabel
    * @param {*} data
    */
-  barchart(inputLabel, outputLabel, data): Promise<void> {
+  barchart(inputLabel: string, outputLabel: string, data: NumericData): Promise<void> {
     const values = data.map(item => {
       return {
         value: item.xs[inputLabel],

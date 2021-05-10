@@ -7,6 +7,7 @@
 /* eslint max-len: ["error", { "code": 180 }] */
 
 import * as tf from '@tensorflow/tfjs';
+import {TypedArray} from "@tensorflow/tfjs-core/dist/types";
 
 // export const ANCHORS = tf.tensor2d([
 //   [0.57273, 0.677385],
@@ -16,7 +17,9 @@ import * as tf from '@tensorflow/tfjs';
 //   [9.77052, 9.16828],
 // ]);
 
-export const boxIntersection = (a, b) => {
+export type Box = [number, number, number, number];
+
+export const boxIntersection = (a: Box, b: Box): number => {
   const w = Math.min(a[3], b[3]) - Math.max(a[1], b[1]);
   const h = Math.min(a[2], b[2]) - Math.max(a[0], b[0]);
   if (w < 0 || h < 0) {
@@ -25,21 +28,23 @@ export const boxIntersection = (a, b) => {
   return w * h;
 };
 
-export const boxUnion = (a, b) => {
+export const boxUnion = (a: Box, b: Box): number => {
   const i = boxIntersection(a, b);
   return (((a[3] - a[1]) * (a[2] - a[0])) + ((b[3] - b[1]) * (b[2] - b[0]))) - i;
 };
 
-export const boxIOU = (a, b) => boxIntersection(a, b) / boxUnion(a, b);
+export const boxIOU = (a: Box, b: Box): number => boxIntersection(a, b) / boxUnion(a, b);
 
 export async function filterBoxes(
-  boxes,
-  boxConfidence,
-  boxClassProbs,
-  threshold,
-) {
+  boxes: tf.Tensor,
+  boxConfidence: tf.Tensor,
+  boxClassProbs: tf.Tensor,
+  threshold: number,
+): Promise<null | tf.Tensor[]> {
 
-  return tf.tidy(() => {
+  let result: null | tf.Tensor[] = null;
+
+  tf.tidy(() => {
 
     const boxScores = tf.mul(boxConfidence, boxClassProbs);
     const boxClasses = tf.argMax(boxScores, -1);
@@ -58,12 +63,12 @@ export async function filterBoxes(
     }
 
     if (indicesArr.length === 0) {
-      return [null, null, null];
+      return;
     }
 
     const indices = tf.tensor1d(indicesArr, 'int32');
 
-    const result = [
+    result = [
       tf.gather(boxes.reshape([maskArr.length, 4]), indices),
       tf.gather(boxClassScores.flatten(), indices),
       tf.gather(boxClasses.flatten(), indices),
@@ -72,12 +77,12 @@ export async function filterBoxes(
     // boxes.dispose();
     // boxClassScores.dispose();
     // boxClasses.dispose();
+  });
 
-    return result;
-  })
+  return result;
 }
 
-export const boxesToCorners = (boxXY, boxWH) => {
+export const boxesToCorners = (boxXY: tf.Tensor, boxWH: tf.Tensor) => {
   return tf.tidy(() => {
     const two = tf.tensor1d([2.0]);
     const boxMins = tf.sub(boxXY, tf.div(boxWH, two));
@@ -86,7 +91,7 @@ export const boxesToCorners = (boxXY, boxWH) => {
     const dim0 = boxMins.shape[0];
     const dim1 = boxMins.shape[1];
     const dim2 = boxMins.shape[2];
-    const size = [dim0, dim1, dim2, 1];
+    const size = [dim0, dim1, dim2, 1] as number[];
 
     return tf.concat([
       boxMins.slice([0, 0, 0, 1], size),
@@ -97,10 +102,10 @@ export const boxesToCorners = (boxXY, boxWH) => {
   })
 };
 
-export const nonMaxSuppression = (boxes, scores, iouThreshold) => {
+export const nonMaxSuppression = (boxes: TypedArray, scores: TypedArray, iouThreshold: number): [number[], Box[], number[]] => {
   return tf.tidy(() => {
     // Zip together scores, box corners, and index
-    const zipped = [];
+    const zipped: [number, Box, number][] = [];
     for (let i = 0; i < scores.length; i += 1) {
       zipped.push([
         scores[i],
@@ -108,7 +113,7 @@ export const nonMaxSuppression = (boxes, scores, iouThreshold) => {
       ]);
     }
     const sortedBoxes = zipped.sort((a, b) => b[0] - a[0]);
-    const selectedBoxes = [];
+    const selectedBoxes: [number, Box, number][] = [];
 
     sortedBoxes.forEach((box) => {
       let add = true;
@@ -134,13 +139,13 @@ export const nonMaxSuppression = (boxes, scores, iouThreshold) => {
 
 // Convert yolo output to bounding box + prob tensors
 /* eslint no-param-reassign: 0 */
-export function head(feats, anchors, numClasses) {
+export function head(feats: tf.Tensor, anchors: tf.Tensor, numClasses: number) {
   return tf.tidy(() => {
     const numAnchors = anchors.shape[0];
 
     const anchorsTensor = tf.reshape(anchors, [1, 1, numAnchors, 2]);
 
-    let convDims = feats.shape.slice(1, 3);
+    const convDims = feats.shape.slice(1, 3);
 
     // For later use
     const convDims0 = convDims[0];
@@ -158,15 +163,15 @@ export function head(feats, anchors, numClasses) {
     convIndex = tf.cast(convIndex, feats.dtype);
 
     feats = tf.reshape(feats, [convDims[0], convDims[1], numAnchors, numClasses + 5]);
-    convDims = tf.cast(tf.reshape(tf.tensor1d(convDims), [1, 1, 1, 2]), feats.dtype);
+    const convDimsTensor = tf.cast(tf.reshape(tf.tensor1d(convDims), [1, 1, 1, 2]), feats.dtype);
 
     let boxXY = tf.sigmoid(feats.slice([0, 0, 0, 0], [convDims0, convDims1, numAnchors, 2]));
     let boxWH = tf.exp(feats.slice([0, 0, 0, 2], [convDims0, convDims1, numAnchors, 2]));
     const boxConfidence = tf.sigmoid(feats.slice([0, 0, 0, 4], [convDims0, convDims1, numAnchors, 1]));
     const boxClassProbs = tf.softmax(feats.slice([0, 0, 0, 5], [convDims0, convDims1, numAnchors, numClasses]));
 
-    boxXY = tf.div(tf.add(boxXY, convIndex), convDims);
-    boxWH = tf.div(tf.mul(boxWH, anchorsTensor), convDims);
+    boxXY = tf.div(tf.add(boxXY, convIndex), convDimsTensor);
+    boxWH = tf.div(tf.mul(boxWH, anchorsTensor), convDimsTensor);
 
     return [boxXY, boxWH, boxConfidence, boxClassProbs];
   })

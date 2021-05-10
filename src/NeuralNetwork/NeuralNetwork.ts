@@ -7,14 +7,18 @@ import {Tensor} from "@tensorflow/tfjs-core";
 import {ArrayMap} from "@tensorflow/tfjs-core/dist/types";
 import {ArgSeparator} from "../utils/argSeparator";
 
+/**
+ * Class for interacting with the model itself, which is a TensorFlow layers model.
+ */
+
 // note: used arrow function to replace constructor binding, but unsure if this is even necessary
 
-interface TrainingOptions extends tf.ModelFitArgs {
+export interface TrainingOptions extends tf.ModelFitArgs {
     // note: tf model can also accept an array or keyed object of Tensors,
     // but current code calls .dispose() so it expects only one Tensor.
     inputs: Tensor;
     outputs: Tensor;
-    whileTraining: Function; //TODO;
+    whileTraining?: tf.ModelFitArgs['callbacks'];
 }
 
 class NeuralNetwork {
@@ -22,38 +26,28 @@ class NeuralNetwork {
     isCompiled: boolean;
     isLayered: boolean;
 
-    model!: tf.Sequential;
+    model: tf.Sequential;
 
     constructor() {
-        // flags
+        // Initialize flags with default value of false
         this.isTrained = false;
         this.isCompiled = false;
         this.isLayered = false;
 
-        // initialize
-        this.init();
-    }
-
-    /**
-     * initialize with create model
-     */
-    init = () => {
-        this.createModel();
+        // Model creation is synchronous, so can assign it directly in the constructor
+        this.model = this.createModel();
     }
 
     /**
      * creates a sequential model
      * uses switch/case for potential future where different formats are supported
-     * @param {*} _type
+     * @param {*} type
      */
-    createModel = (_type = 'sequential'): tf.Sequential => {
-        switch (_type.toLowerCase()) {
+    createModel = (type = 'sequential'): tf.Sequential => {
+        switch (type.toLowerCase()) {
             case 'sequential':
-                this.model = tf.sequential();
-                return this.model;
             default:
-                this.model = tf.sequential();
-                return this.model;
+                return tf.sequential();
         }
     }
 
@@ -74,10 +68,10 @@ class NeuralNetwork {
     /**
      * Compile the model
      * if the model is compiled, set the isCompiled flag to true
-     * @param {*} _modelOptions
+     * @param {*} modelOptions
      */
-    compile = (_modelOptions: tf.ModelCompileArgs): void => {
-        this.model.compile(_modelOptions);
+    compile = (modelOptions: tf.ModelCompileArgs): void => {
+        this.model.compile(modelOptions);
         this.isCompiled = true;
     }
 
@@ -93,11 +87,11 @@ class NeuralNetwork {
 
     /**
      * Calls the trainInternal() and calls the callback when finished
-     * @param {*} _options
+     * @param {*} options
      * @param {*} _cb
      */
-    train = (_options: TrainingOptions, _cb?: Callback<void>): Promise<void> => {
-        return callCallback(this.trainInternal(_options), _cb);
+    train = (options: TrainingOptions, _cb?: Callback<void>): Promise<void> => {
+        return callCallback(this.trainInternal(options), _cb);
     }
 
     /**
@@ -110,7 +104,6 @@ class NeuralNetwork {
 
         await this.model.fit(xs, ys, {
             ...config,
-            // TODO: whileTraining is not a valid name of CustomCallbackArgs
             callbacks: whileTraining,
         });
 
@@ -122,32 +115,33 @@ class NeuralNetwork {
 
     /**
      * returns the prediction as an array synchronously
-     * @param {*} _inputs
+     * @param {*} inputs
      */
-    predictSync = (_inputs: tf.Tensor): ArrayMap[tf.Rank] => {
+    predictSync = (inputs: tf.Tensor): ArrayMap[tf.Rank] => {
         const output = tf.tidy(() => {
-            return this.model.predict(_inputs) as tf.Tensor;
+            return this.model.predict(inputs) as tf.Tensor;
         });
         const result = output.arraySync();
 
         output.dispose();
-        _inputs.dispose();
+        inputs.dispose();
 
         return result;
     }
 
     /**
      * returns the prediction as an array
-     * @param {*} _inputs
+     * @param {*} inputs
      */
-    predict = async (_inputs: tf.Tensor): Promise<ArrayMap[tf.Rank]> => {
+    predict = async (inputs: tf.Tensor): Promise<ArrayMap[tf.Rank]> => {
         const output = tf.tidy(() => {
-            return this.model.predict(_inputs) as tf.Tensor;
+            // TODO: what about options batchSize and verbose?
+            return this.model.predict(inputs) as tf.Tensor;
         });
         const result = await output.array();
 
         output.dispose();
-        _inputs.dispose();
+        inputs.dispose();
 
         return result;
     }
@@ -207,7 +201,7 @@ class NeuralNetwork {
      * @param {*} callback
      */
         // TODO: clean this up
-    load = async (filesOrPath: string | FileList | {model: string; weights: string}, callback?: Callback<tf.Sequential>): Promise<tf.Sequential> => {
+    load = async (filesOrPath: string | FileList | { model: string; weights: string }, callback?: Callback<tf.Sequential>): Promise<tf.Sequential> => {
         if (filesOrPath instanceof FileList) {
             const files = await Promise.all(
                 Array.from(filesOrPath).map(async file => {
@@ -253,6 +247,7 @@ class NeuralNetwork {
         this.isLayered = true;
         this.isTrained = true;
 
+        // TODO: proper callback handling
         if (callback) {
             callback();
         }
@@ -267,6 +262,13 @@ class NeuralNetwork {
         this.model.dispose();
     }
 
+    /**
+     * Create a copy of the model with the same layers and weights.
+     */
+    clone = () => {
+        this.model.getUserDefinedMetadata()
+    }
+
     // NeuroEvolution Functions
 
     /**
@@ -277,10 +279,11 @@ class NeuralNetwork {
     mutate = (rate: number = 0.1, mutateFunction?: (value: number) => number): void => {
         tf.tidy(() => {
             const weights = this.model.getWeights();
-            const mutatedWeights = [];
-            for (let i = 0; i < weights.length; i += 1) {
-                const tensor = weights[i];
-                const {shape} = weights[i];
+            // use randomGaussian as the default mutate function
+            const random = randomGaussian(0, 1);
+            const mutatedWeights = weights.map(tensor => {
+                // create a new tensor where some values are mutated and others are not
+                const {shape} = tensor;
                 // TODO: Evaluate if this should be sync or not
                 const values = tensor.dataSync().slice();
                 for (let j = 0; j < values.length; j += 1) {
@@ -288,12 +291,14 @@ class NeuralNetwork {
                         if (mutateFunction) {
                             values[j] = mutateFunction(values[j]);
                         } else {
-                            values[j] = Math.min(Math.max(values[j] + randomGaussian(), -1), 1);
+                            // TODO: is it really necessary or desired to clamp weight values between -1 and 1?
+                            // Note: resample if out of bounds is better than clamp, but I think this is not needed at all
+                            values[j] = Math.min(Math.max(values[j] + random(), -1), 1);
                         }
                     }
                 }
-                mutatedWeights[i] = tf.tensor(values, shape);
-            }
+                return tf.tensor(values, shape);
+            });
             this.model.setWeights(mutatedWeights);
         });
     }

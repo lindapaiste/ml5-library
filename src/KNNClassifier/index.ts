@@ -16,27 +16,48 @@ import * as io from '../utils/io';
 import callCallback, {Callback} from '../utils/callcallback';
 import {Tensor2D} from "@tensorflow/tfjs-core";
 import {ArgSeparator} from "../utils/argSeparator";
+import {ObjectBuilder} from "../utils/objectUtilities";
 
 interface KNNClassification {
+    /**
+     * label/class name for the top classification
+     */
     label: string;
+    /**
+     * index of the top class
+     */
     classIndex: number;
-    confidences: Record<string, number>;
+    /**
+     * confidences for the top K classes, keyed by classIndex
+     */
+    confidences: Record<number, number>;
+    /**
+     * confidences for the top K classes, keyed by label
+     */
     confidencesByLabel: Record<string, number>;
 }
 
+interface SavedDataEntry {
+    label: string;
+    shape: [number, number];
+    dtype: tf.DataType;
+    // actually has a few more properties, but they aren't needed
+}
+
 interface KNNSavedData {
+    /**
+     * An array of tensor values which shares the same indexes as the dataset.
+     */
     tensors: (Float32Array | Int32Array | Uint8Array)[];
-    dataset: Record<string,
-        // serialized Tensor + added label
-        Pick<Tensor2D, 'shape' | 'dtype'> & {label: string}
-    >
+    /**
+     * Currently saves as an array, but need to support a numeric-keyed object for backwards compatibility.
+     */
+    dataset: SavedDataEntry[] | Record<number, SavedDataEntry>;
 }
 
 export const asTensor = (input: Tensor | TensorLike): Tensor => {
     return input instanceof Tensor ? input : tf.tensor(input);
 }
-
-// TODO: it seems like the internal tersorflow model already supports string labels.  Is mapStringToIndex even necessary?
 
 /**
  * @property {KNNClassifier} knnClassifier
@@ -44,7 +65,6 @@ export const asTensor = (input: Tensor | TensorLike): Tensor => {
 class KNN {
     // TODO: rename to `model` for consistency
     public readonly knnClassifier: knnClassifier.KNNClassifier;
-    private mapStringToIndex: string[];
 
 
     /**
@@ -52,7 +72,6 @@ class KNN {
      */
     constructor() {
         this.knnClassifier = knnClassifier.create();
-        this.mapStringToIndex = [];
     }
 
     /**
@@ -61,15 +80,8 @@ class KNN {
      * @param {(number | string)} classIndexOrLabel  The class index(number) or label(string) of the example.
      */
     addExample(input: Tensor | TensorLike, classIndexOrLabel: number | string) {
-        let classIndex = this.labelIndex(classIndexOrLabel);
-
-        // add to labels map if not already present
-        if (typeof classIndexOrLabel === 'string' && classIndex === -1) {
-            classIndex = this.mapStringToIndex.push(classIndexOrLabel) - 1;
-        }
-
         // convert to Tensor and add to TensorFlow model
-        this.knnClassifier.addExample(asTensor(input), classIndex);
+        this.knnClassifier.addExample(asTensor(input), classIndexOrLabel);
     }
 
     /**
@@ -84,9 +96,8 @@ class KNN {
     }
 
     /**
-     * @param {*} input
+     * @param {Tensor} input
      * @param {number} k
-     * @return {Promise<{label: string, classIndex: number, confidences: {[p: string]: number}}>}
      */
     async classifyInternal(input: Tensor, k: number): Promise<KNNClassification> {
         const numClass = this.knnClassifier.getNumClasses();
@@ -94,46 +105,37 @@ class KNN {
             throw new Error('There is no example in any class');
         } else {
             const res = await this.knnClassifier.predictClass(input, k);
-            if (this.mapStringToIndex.length > 0) {
-                if (res.classIndex || res.classIndex === 0) {
-                    const label = this.mapStringToIndex[res.classIndex];
-                    if (label) res.label = label;
-                }
-                if (res.confidences) {
-                    res.confidencesByLabel = {};
-                    const {confidences} = res;
-                    const indexes = Object.keys(confidences);
-                    indexes.forEach((index) => {
-                        const label = this.mapStringToIndex[index];
-                        res.confidencesByLabel[label] = confidences[index];
-                    });
-                }
+            const {confidences: confidencesByLabel, classIndex, label} = res;
+            const confidences = ObjectBuilder.from(confidencesByLabel).mapKeys(this.labelToIndex);
+            return {
+                classIndex,
+                label,
+                confidences,
+                confidencesByLabel,
             }
-            return res;
         }
     }
 
     /**
-     * Helper method converts an argument which is either a label or an index into an index
-     * @param labelOrIndex
+     * Helper method converts a string label into its numeric classIndex
+     * @param label
      * @private
      */
-    private labelIndex(labelOrIndex: string | number): number {
-        return typeof labelOrIndex === "number" ? labelOrIndex : this.mapStringToIndex.indexOf(labelOrIndex);
+    private labelToIndex = (label: string): number => {
+        // @ts-ignore accesses private property of the internal classifier.
+        return this.knnClassifier.labelToClassId[label];
     }
+
 
     /**
      * Clear all examples in a label.
      * @param {number||string} labelOrIndex - The class index or label, a number or a string.
      */
     clearLabel(labelOrIndex: string | number) {
-        const classIndex = this.labelIndex(labelOrIndex);
-        // throw error if -1?  do nothing?
-        this.knnClassifier.clearClass(classIndex);
+        this.knnClassifier.clearClass(labelOrIndex);
     }
 
     clearAllLabels(): void {
-        this.mapStringToIndex = [];
         this.knnClassifier.clearAllClasses();
     }
 
@@ -141,20 +143,7 @@ class KNN {
      * Get the example count for each label. It returns an object that maps class label to example count for each class.
      */
     getCountByLabel(): Record<string, number> {
-        const countByIndex = this.knnClassifier.getClassExampleCount();
-        if (this.mapStringToIndex.length > 0) {
-            const countByLabel: Record<string, number> = {};
-            Object.keys(countByIndex).forEach((key) => {
-                // @ts-ignore the keys are of type string, but they should be numbers like "1"
-                if (this.mapStringToIndex[key]) {
-                    // @ts-ignore
-                    const label = this.mapStringToIndex[key];
-                    countByLabel[label] = countByIndex[key];
-                }
-            });
-            return countByLabel;
-        }
-        return countByIndex;
+        return this.knnClassifier.getClassExampleCount();
     }
 
     /**
@@ -185,35 +174,36 @@ class KNN {
 
     /**
      * Download the whole dataset as a JSON file. It's useful for saving state.
-     * @param {string} [name] - Optional. The name of the JSON file that will be downloaded. e.g. "myKNN" or "myKNN.json". If no fileName is provided, the default file name is "myKNN.json".
+     * @param {string} [name] - Optional. The name of the JSON file that will be downloaded. e.g. "myKNN" or "myKNN.json".
+     * If no fileName is provided, the default file name is "myKNN.json".
      */
-    async save(name?: string): Promise<void> {
-        const dataset = this.knnClassifier.getClassifierDataset();
-        if (this.mapStringToIndex.length > 0) {
-            Object.keys(dataset).forEach((key) => {
-                if (this.mapStringToIndex[key]) {
-                    dataset[key].label = this.mapStringToIndex[key];
-                }
-            });
-        }
-        const tensors = Object.keys(dataset).map((key) => {
-            const t = dataset[key];
-            if (t) {
-                return t.dataSync();
-            }
-            return null;
-        });
-        let fileName = 'myKNN.json';
-        if (name) {
-            fileName = name.endsWith('.json') ? name : `${name}.json`;
-        }
+    async save(name: string = 'myKNN.json'): Promise<void> {
+        // get a dictionary of tensors keyed by label
+        const rawDataset = this.getClassifierDataset();
+
+        // add label to each entry
+        const dataset = Object.entries(rawDataset).map(([label, tensor]) => ({
+            ...tensor,
+            label
+        }));
+
+        // get the values from each tensor
+        const tensors = await Promise.all(
+            Object.values(rawDataset).map((tensor) => tensor.data() )
+        );
+
+        // save the file
+        const fileName = name.endsWith('.json') ? name : `${name}.json`;
+        // TODO: is file type correct?
         await io.saveBlob(JSON.stringify({dataset, tensors}), fileName, 'application/octet-stream');
     }
 
     /**
      * Load a dataset from a JSON file. It's useful for restoring state.
+     *
      * @param {string} pathOrData - The path for a valid JSON file.
-     * @param {function} [callback] - Optional. A function to run once the dataset has been loaded. If no callback is provided, it will return a promise that will be resolved once the dataset has loaded.
+     * @param {function} [callback] - Optional. A function to run once the dataset has been loaded.
+     * If no callback is provided, it will return a promise that will be resolved once the dataset has loaded.
      */
     async load(pathOrData: string | KNNSavedData, callback: Callback<void>): Promise<void> {
         return callCallback((async () => {
@@ -223,15 +213,12 @@ class KNN {
             } else {
                 data = await io.loadFile<KNNSavedData>(pathOrData);
             }
-                const {dataset, tensors} = data;
-                this.mapStringToIndex = Object.keys(dataset).map(key => dataset[key].label);
-                const tensorsData = tensors
-                    .map((values, i) => tf.tensor<Rank.R2>(values, dataset[i].shape, dataset[i].dtype))
-                    .reduce((acc: Record<number, Tensor2D>, cur, j) => {
-                        acc[j] = cur;
-                        return acc;
-                    }, {});
-                this.knnClassifier.setClassifierDataset(tensorsData);
+            const {dataset, tensors} = data;
+            // Note: needs to support previous downloads which used numeric keys instead of an array for dataset
+            const keyedTensors = ObjectBuilder
+                .fromValues(tensors.map((values, i) => tf.tensor<Rank.R2>(values, dataset[i].shape, dataset[i].dtype)))
+                .createKeys((_, i) => dataset[i].label);
+            this.knnClassifier.setClassifierDataset(keyedTensors);
         })(), callback);
     }
 }

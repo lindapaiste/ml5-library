@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-import axios from "axios";
+import axios, {ResponseType, AxiosRequestConfig} from "axios";
 
 // Forces download of a blob
 const saveBlob = async (data: BufferSource | Blob | string, name: string, type?: string): Promise<void> => {
@@ -17,14 +17,17 @@ const saveBlob = async (data: BufferSource | Blob | string, name: string, type?:
 };
 
 // Helper method to retrieve JSON from a file
-const loadFile = async <T = any>(path: string): Promise<T> => {
+const loadFile = async <T = any>(path: string, responseType?: ResponseType, options?: AxiosRequestConfig): Promise<T> => {
     try {
-        const res = await axios.get<T>(path);
+        const res = await axios.get<T>(path, {
+            ...options,
+            responseType
+        });
         return res.data;
     }
     // catch to throw with a better error
     catch (error) {
-        throw new Error(`There has been a problem loading the file from URL ${path}: ${error?.message}.`);
+        throw new Error(`Error loading file from URL ${path}: ${error?.message}.`);
     }
 }
 

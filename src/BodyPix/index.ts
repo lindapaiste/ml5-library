@@ -3,9 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-/* eslint prefer-destructuring: ["error", {AssignmentExpression: {array: false}}] */
-/* eslint no-await-in-loop: "off" */
-
 /*
  * BodyPix: Real-time Person Segmentation in the Browser
  * Ported and integrated from all the hard work by: https://github.com/tensorflow/tfjs-models/tree/master/body-pix
@@ -14,18 +11,25 @@
 import * as tf from '@tensorflow/tfjs';
 import * as bp from '@tensorflow-models/body-pix';
 import callCallback, {Callback} from '../utils/callcallback';
-import p5Utils from '../utils/p5Utils';
+import p5Utils, {P5Image} from '../utils/p5Utils';
 import BODYPIX_PALETTE from './BODYPIX_PALETTE';
 import {MobileNetMultiplier, OutputStride} from "@tensorflow-models/body-pix/dist/mobilenet";
 import {ArgSeparator} from "../utils/argSeparator";
 import {TfImageSource} from "../utils/imageUtilities";
+import {Tensor3D} from "@tensorflow/tfjs-core";
+import {isP5Color, P5Color, p5ColorToRGB, RGB} from "../utils/colorUtilities";
+import {toTensor} from "../utils/imageConversion";
+import {generatedImageResult} from "../utils/GeneratedImage";
+
+type BodyPalette<Color> = Record<string, { id: number; color: Color }>
 
 interface BodyPixOptions {
   multiplier: MobileNetMultiplier;
   outputStride: OutputStride;
   segmentationThreshold: number;
   returnTensors: boolean;
-  palette: typeof BODYPIX_PALETTE; //TODO
+  // TODO: accept input as just colors without ids. The user should not be able to change the ids!
+  palette: BodyPalette<RGB | P5Color>;
 }
 
 const DEFAULTS: BodyPixOptions = {
@@ -36,19 +40,28 @@ const DEFAULTS: BodyPixOptions = {
   "returnTensors": false,
 }
 
-interface BodyPixMasks<T> {
-  personMask: T;
-  backgroundMask: T;
-  partMask: T;
+type Result<Keys extends string> = {
+  segmentation: Uint8ClampedArray;
+  raw: Record<Keys, ImageData>;
+  tensor?: Record<Keys, Tensor3D>;
+} & Record<Keys, P5Image | Uint8ClampedArray>;
+
+type KeysWithoutParts = "personMask" | "backgroundMask";
+type KeysWithParts = KeysWithoutParts | "partMask";
+
+export type SegmentResult = Result<KeysWithoutParts>;
+
+export type SegmentWithPartsResult = Result<KeysWithParts> & {
+  bodyParts: BodyPalette<RGB>;
 }
 
 class BodyPix {
-  video: HTMLVideoElement;
+  video: HTMLVideoElement | null;
   config: BodyPixOptions;
   modelReady: boolean;
   modelPath: string;
-  model: bp.BodyPix | null;
-  ready: Promise<any>;
+  model?: bp.BodyPix;
+  ready: Promise<BodyPix>;
 
   /**
    * Create BodyPix.
@@ -56,9 +69,8 @@ class BodyPix {
    * @param {object} options - An object with options.
    * @param {function} callback - A callback to be called when the model is ready.
    */
-  constructor(video: HTMLVideoElement, options: Partial<BodyPixOptions> = {}, callback: Callback<BodyPix>) {
-    this.video = video;
-    this.model = null;
+  constructor(video?: HTMLVideoElement, options: Partial<BodyPixOptions> = {}, callback?: Callback<BodyPix>) {
+    this.video = video || null;
     this.modelReady = false;
     this.modelPath = ''
     this.config = {
@@ -72,23 +84,10 @@ class BodyPix {
    * Load the model and set it to this.model
    * @return {this} the BodyPix model.
    */
-  async loadModel() {
+  private async loadModel() {
     this.model = await bp.load(this.config.multiplier);
     this.modelReady = true;
     return this;
-  }
-
-  /**
-   * Returns an rgb array
-   * @param {Object} a p5.Color obj
-   * @return {Array} an [r,g,b] array
-   */
-  /* eslint class-methods-use-this: "off" */
-  p5Color2RGB(p5ColorObj) {
-    const regExp = /\(([^)]+)\)/;
-    const match = regExp.exec(p5ColorObj.toString('rgb'));
-    const [r, g, b] = match[1].split(',')
-    return [r, g, b]
   }
 
   /**
@@ -97,30 +96,29 @@ class BodyPix {
    */
   async convertToP5Image(tfBrowserPixelImage, segmentationWidth, segmentationHeight) {
     const blob1 = await p5Utils.rawToBlob(tfBrowserPixelImage, segmentationWidth, segmentationHeight);
-    const p5Image1 = await p5Utils.blobToP5Image(blob1);
-    return p5Image1
+    return await p5Utils.blobToP5Image(blob1)
   }
 
   /**
    * Returns a bodyPartsSpec object
-   * @param {Array} an array of [r,g,b] colors
+   * @param {Array} colorOptions an array of [r,g,b] colors
    * @return {object} an object with the bodyParts by color and id
    */
-  /* eslint class-methods-use-this: "off" */
-  bodyPartsSpec(colorOptions) {
-    const result = colorOptions !== undefined || Object.keys(colorOptions).length >= 24 ? colorOptions : this.config.palette;
-
-    // Check if we're getting p5 colors, make sure they are rgb
-    if (p5Utils.checkP5() && result !== undefined && Object.keys(result).length >= 24) {
-      // Ensure the p5Color object is an RGB array
-      Object.keys(result).forEach(part => {
-        if (result[part].color instanceof window.p5?.Color) {
-          result[part].color = this.p5Color2RGB(result[part].color);
+  private bodyPartsSpec(colorOptions: BodyPalette<RGB | P5Color>): BodyPalette<RGB> {
+    // using keys form the default ensures that nothing extra is added and that all parts are present
+    return Object.keys(BODYPIX_PALETTE).reduce((palette: BodyPalette<RGB>, part) => {
+      const {color} = colorOptions[part] || this.config.palette[part] || BODYPIX_PALETTE[part];
+      // use the ids from the default palette to ensure that they are not overwritten incorrectly.
+      const id = BODYPIX_PALETTE[part].id;
+      return {
+        ...palette,
+        [part]: {
+          id,
+          color: isP5Color(color) ? p5ColorToRGB(color) : color,
         }
-      });
-    }
-
-    return result;
+      }
+    }, {});
+    // could sort by id, but it's not needed because the defaults are in order
   }
 
   /**
@@ -131,7 +129,7 @@ class BodyPix {
    *    includes outputStride, segmentationThreshold
    * @return {Object} a result object with image, raw, bodyParts
    */
-  async segmentWithPartsInternal(imgToSegment, segmentationOptions) {
+  public async segmentWithPartsInternal(imgToSegment: TfImageSource, segmentationOptions?: Partial<BodyPixOptions>) {
     // estimatePartSegmentation
     await this.ready;
     await tf.nextFrame();
@@ -142,14 +140,12 @@ class BodyPix {
       });
     }
 
-    this.config.palette = segmentationOptions.palette || this.config.palette;
-    this.config.outputStride = segmentationOptions.outputStride || this.config.outputStride;
-    this.config.segmentationThreshold = segmentationOptions.segmentationThreshold || this.config.segmentationThreshold;
+    const {palette, outputStride, segmentationThreshold} = {...this.config, ...segmentationOptions};
 
-    const segmentation = await this.model.estimatePartSegmentation(imgToSegment, this.config.outputStride, this.config.segmentationThreshold);
+    const segmentation = await this.model!.estimatePartSegmentation(imgToSegment, outputStride, segmentationThreshold);
 
-    const bodyPartsMeta = this.bodyPartsSpec(this.config.palette);
-    const colorsArray = Object.keys(bodyPartsMeta).map(part => bodyPartsMeta[part].color)
+    const bodyPartsMeta = this.bodyPartsSpec(palette);
+    const colorsArray = Object.values(bodyPartsMeta).map(obj => obj.color);
 
     const result = {
       segmentation,
@@ -168,24 +164,23 @@ class BodyPix {
       partMask: null,
       bodyParts: bodyPartsMeta
     };
-    result.raw.backgroundMask = bp.toMaskImageData(segmentation, true);
-    result.raw.personMask = bp.toMaskImageData(segmentation, false);
-    result.raw.partMask = bp.toColoredPartImageData(segmentation, colorsArray);
+    const rawBackgroundMask = bp.toMaskImageData(segmentation, true);
+    const rawPersonMask = bp.toMaskImageData(segmentation, false);
+    const rawPartMask = bp.toColoredPartImageData(segmentation, colorsArray);
 
     const {
       personMask,
       backgroundMask,
       partMask,
     } = tf.tidy(() => {
-      let normTensor = tf.browser.fromPixels(imgToSegment);
       // create a tensor from the input image
-      const alpha = tf.ones([segmentation.height, segmentation.width, 1]).tile([1, 1, 1]).mul(255)
-      normTensor = normTensor.concat(alpha, 2)
+      const alpha = tf.ones([segmentation.height, segmentation.width, 1]).tile([1, 1, 1]).mul(255);
+      const normTensor = toTensor(imgToSegment).concat(alpha, 2);
 
       // create a tensor from the segmentation
       let maskPersonTensor = tf.tensor(segmentation.data, [segmentation.height, segmentation.width, 1]);
       let maskBackgroundTensor = tf.tensor(segmentation.data, [segmentation.height, segmentation.width, 1]);
-      let partTensor = tf.tensor([...result.raw.partMask.data], [segmentation.height, segmentation.width, 4]);
+      let partTensor = tf.tensor([...rawPartMask.data], [segmentation.height, segmentation.width, 4]);
 
       // multiply the segmentation and the inputImage
       maskPersonTensor = tf.cast(maskPersonTensor.add(0.2).sign().relu().mul(normTensor), 'int32')
@@ -199,6 +194,12 @@ class BodyPix {
         partMask: partTensor
       }
     })
+
+    const person = generatedImageResult(personMask);
+    const background = generatedImageResult(backgroundMask);
+    const parts = generatedImageResult(partMask);
+
+    // TODO: IMPORTANT: For backwards compatibility, return the pixels array instead of the canvas when no p5
 
     const personMaskPixels = await tf.browser.toPixels(personMask);
     const bgMaskPixels = await tf.browser.toPixels(backgroundMask);
@@ -240,16 +241,15 @@ class BodyPix {
    * @param {function} cb - a callback function that handles the results of the function.
    * @return {function} a promise or the results of a given callback, cb.
    */
-  async segmentWithParts(optionsOrCallback, configOrCallback, cb) {
-    const {image, options, callback} = new ArgSeparator(optionsOrCallback, configOrCallback, cb);
-    const imgToSegment = image || this.video;
-    if ( ! imgToSegment ) { // Handle unsupported input
+  public async segmentWithParts(optionsOrCallback, configOrCallback, cb) {
+    const {image, options, callback} = new ArgSeparator(this.video, optionsOrCallback, configOrCallback, cb);
+    if ( ! image ) { // Handle unsupported input
       throw new Error(
           'No input image provided. If you want to classify a video, pass the video element in the constructor.',
       );
     }
 
-    return callCallback(this.segmentWithPartsInternal(imgToSegment, options), callback);
+    return callCallback(this.segmentWithPartsInternal(image, options), callback);
   }
 
   /**
@@ -316,6 +316,8 @@ class BodyPix {
       normTensor = normTensor.concat(alpha, 2)
       // normTensor.print();
 
+
+      // TODO: can combine these next steps by chaining .cast(), but need to make sure it's the same
       // create a tensor from the segmentation
       let maskPersonTensor = tf.tensor(segmentation.data, [segmentation.height, segmentation.width, 1]);
       let maskBackgroundTensor = tf.tensor(segmentation.data, [segmentation.height, segmentation.width, 1]);
@@ -376,7 +378,7 @@ class BodyPix {
 
 }
 
-const bodyPix = (videoOrOptionsOrCallback, optionsOrCallback, cb) => {
+const bodyPix = (videoOrOptionsOrCallback?: HTMLVideoElement | BodyPixOptions | Callback<BodyPix>, optionsOrCallback?: BodyPixOptions | Callback<BodyPix>, cb?: Callback<BodyPix>) => {
   const {video, options, callback} = new ArgSeparator(videoOrOptionsOrCallback, optionsOrCallback, cb);
 
   const instance = new BodyPix(video, options, callback);

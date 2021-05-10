@@ -1,7 +1,25 @@
-import {browser, Tensor3D} from "@tensorflow/tfjs-core";
-import {createSizedCanvas, getCtx, ImageArg, MediaElement, TfImageSource, VideoArg} from "./imageUtilities";
+import {browser, image, Rank, tensor, Tensor2D, Tensor3D} from "@tensorflow/tfjs-core";
+import {createSizedCanvas, getCtx, MediaElement, TfImageSource} from "./imageUtilities";
 import {Tensor} from "@tensorflow/tfjs";
-import p5 = require("p5");
+import {P5Element, P5Image} from "./p5Utils";
+
+/**
+ * Note: uses prefixed names, ie. "imageType" instead of "type" to remove ambiguity
+ * so that model options can extend this.
+ */
+export interface ImageConvertOptions {
+    /**
+     * The image format to use for the Blob and DataURL.
+     * Default: image/png
+     */
+    imageType?: string;
+    /**
+     * A Number between 0 and 1 indicating the image quality to use for image formats that use lossy compression
+     * such as image/jpeg and image/webp.
+     * Default: 0.92
+     */
+    imageQuality?: number;
+}
 
 /**
  * expect to implement all methods -- throw an error if cannot convert
@@ -13,7 +31,7 @@ interface ImageWrapper {
 
     toTensor(): Tensor3D;
 
-    toBlob(type?: string): Blob | Promise<Blob>;
+    toBlob(): Blob | Promise<Blob>;
 
     toData(): ImageData | Promise<ImageData>;
 
@@ -21,67 +39,53 @@ interface ImageWrapper {
 
     toCanvas(): HTMLCanvasElement | Promise<HTMLCanvasElement>;
 
-    toImage(type?: string): HTMLImageElement | Promise<HTMLImageElement>;
+    toImage(): HTMLImageElement | Promise<HTMLImageElement>;
 
-    toDataUrl(type?: string): string | Promise<string>;
+    toDataUrl(): string | Promise<string>;
 }
 
-abstract class ImageWrapperClass<T extends TfImageSource> {
-
-    // Store the Canvas to prevent duplicate creation,
-    // Since so many other methods rely on it.
-    protected canvas?: HTMLCanvasElement;
-
-    protected internal: T;
-
-    constructor(image: T) {
-        this.internal = image;
+/**
+ * Most other conversions go through canvas. Most conversions from canvas are synchronous (except blob).
+ */
+class CanvasConverter implements ImageWrapper {
+    constructor(protected canvas: HTMLCanvasElement, public options: ImageConvertOptions = {}) {
     }
 
-    abstract getWidth(): number;
-
-    abstract getHeight(): number;
-
-    // Base class methods rely on conversion through Canvas.
-    // Can override if there is a better way.
-
-    abstract createCanvas(): HTMLCanvasElement | Promise<HTMLCanvasElement>;
-
-    async toCanvas(): Promise<HTMLCanvasElement> {
-        if ( this.canvas ) {
-            return this.canvas;
-        }
-        const canvas = await this.createCanvas();
-        this.canvas = canvas;
-        return canvas;
+    getWidth(): number {
+        return this.canvas.width;
     }
 
-    async toBlob(type?: string): Promise<Blob> {
-        const canvas = await this.toCanvas();
+    getHeight(): number {
+        return this.canvas.height;
+    }
+
+    toTensor(): Tensor3D {
+        return browser.fromPixels(this.canvas);
+    }
+
+    toBlob(): Promise<Blob> {
         // canvas has a toBlob method but it is a sync method that takes a callback
         return new Promise((resolve, reject) => {
-            canvas.toBlob(blob => {
+            this.canvas.toBlob(blob => {
                 blob === null ? reject(new Error("Error converting canvas to Blob")) : resolve(blob);
-            }, type); // implied image/png format
+            }, this.options.imageType, this.options.imageQuality);
         });
     }
 
-    async toData(): Promise<ImageData> {
-        const canvas = await this.toCanvas();
-        return getCtx(canvas).getImageData(0, 0, this.getWidth(), this.getHeight());
+    toData(): ImageData {
+        return getCtx(this.canvas).getImageData(0, 0, this.getWidth(), this.getHeight());
     }
 
-    async toPixels(): Promise<Uint8ClampedArray> {
-        const data = await this.toData();
-        return data.data;
+    toPixels(): Uint8ClampedArray {
+        return this.toData().data;
     }
 
-    async toDataUrl(type?: string): Promise<string> {
-        return (await this.toCanvas()).toDataURL(type);
+    toCanvas(): HTMLCanvasElement {
+        return this.canvas;
     }
 
-    async toImage(type?: string): Promise<HTMLImageElement> {
-        const dataUrl = await this.toDataUrl(type);
+    toImage(): HTMLImageElement {
+        const dataUrl = this.toDataUrl();
         const image = document.createElement('img');
         image.src = dataUrl;
         image.width = this.getWidth();
@@ -89,12 +93,83 @@ abstract class ImageWrapperClass<T extends TfImageSource> {
         return image;
     }
 
+    toDataUrl(): string {
+        return this.canvas.toDataURL(this.options.imageType, this.options.imageQuality);
+    }
 }
 
-class TensorWrapper extends ImageWrapperClass<Tensor3D> implements ImageWrapper {
+type WrapperSource = TfImageSource | Tensor2D;
+
+abstract class ImageWrapperClass<T extends WrapperSource> {
+
+    // Store the Canvas to prevent duplicate creation since so many other methods rely on it.
+    protected canvas?: CanvasConverter;
+
+    protected internal: T;
+
+    public options: ImageConvertOptions;
+
+    constructor(image: T, options: ImageConvertOptions = {}) {
+        this.internal = image;
+        this.options = options;
+    }
+
+    setType(type: string): void {
+        this.options.imageType = type;
+    }
+
+    setQuality(quality: number): void {
+        this.options.imageQuality = quality;
+    }
+
+    abstract getWidth(): number;
+
+    abstract getHeight(): number;
+
+    abstract createCanvas(): HTMLCanvasElement | Promise<HTMLCanvasElement>;
+
+    // Base class methods rely on conversion through Canvas.
+    // Can override if there is a better way.
+
+    private async getCanvas(): Promise<CanvasConverter> {
+        if (this.canvas) {
+            return this.canvas;
+        }
+        const canvas = await this.createCanvas();
+        this.canvas = new CanvasConverter(canvas, this.options);
+        return this.canvas;
+    }
+
+    async toCanvas(): Promise<HTMLCanvasElement> {
+        return (await this.getCanvas()).toCanvas();
+    }
+
+    async toBlob(): Promise<Blob> {
+        return (await this.getCanvas()).toBlob();
+    }
+
+    async toData(): Promise<ImageData> {
+        return (await this.getCanvas()).toData();
+    }
+
+    async toPixels(): Promise<Uint8ClampedArray> {
+        return (await this.getCanvas()).toPixels();
+    }
+
+    async toDataUrl(): Promise<string> {
+        return (await this.getCanvas()).toDataUrl();
+    }
+
+    async toImage(): Promise<HTMLImageElement> {
+        return (await this.getCanvas()).toImage();
+    }
+
+}
+
+export class TensorWrapper<T extends Tensor2D | Tensor3D = Tensor3D> extends ImageWrapperClass<T> implements ImageWrapper {
     // use instance vars to prevent duplicate calls of browser.toPixels
     protected pixels?: Uint8ClampedArray;
-    protected canvas?: HTMLCanvasElement;
+    protected canvas?: CanvasConverter;
 
     getWidth(): number {
         return this.internal.shape[1];
@@ -105,21 +180,25 @@ class TensorWrapper extends ImageWrapperClass<Tensor3D> implements ImageWrapper 
     }
 
     toTensor(): Tensor3D {
-        return this.internal;
+        // Not sure how to handle a 2D tensor here.
+        // Can simply reshape to a 3D with depth 1. Could also convert to a grayscale image and convert that to a tensor.
+        const tensor = this.internal;
+        return is3D(tensor) ? tensor : tensor.reshape([this.getWidth(), this.getHeight(), 1]);
     }
 
     private async _loadPixels(): Promise<{ canvas: HTMLCanvasElement; pixels: Uint8ClampedArray }> {
         // tf.browser.toPixels will load pixels into the provided canvas, but returns a Unit8ClampedArray
-        this.canvas = document.createElement('canvas');
-        this.pixels = await browser.toPixels(this.internal, this.canvas);
+        const canvas = document.createElement('canvas');
+        this.pixels = await browser.toPixels(this.internal, canvas);
+        this.canvas = new CanvasConverter(canvas);
         return {
-            canvas: this.canvas,
+            canvas,
             pixels: this.pixels
         };
     }
 
     async toPixels(): Promise<Uint8ClampedArray> {
-        if ( this.pixels) {
+        if (this.pixels) {
             return this.pixels;
         }
         return (await this._loadPixels()).pixels;
@@ -191,7 +270,7 @@ class ElementWrapper<T extends MediaElement> extends ImageWrapperClass<T> implem
 
     async toImage(type?: string): Promise<HTMLImageElement> {
         // could throw error on video, but probably it's actually ok to covert it.
-        if ( this.internal instanceof HTMLImageElement ) {
+        if (this.internal instanceof HTMLImageElement) {
             return this.internal;
         }
         return super.toImage();
@@ -204,10 +283,6 @@ class CanvasWrapper extends ElementWrapper<HTMLCanvasElement> {
     }
 }
 
-class P5ImageWrapper {
-
-}
-
 const hasProperty = <T extends any, P extends string>(image: T, property: P): image is T & Record<P, any> => {
     return typeof image === "object" && image !== null && property in image;
 }
@@ -215,27 +290,46 @@ const hasProperty = <T extends any, P extends string>(image: T, property: P): im
 export const isImageData = (image: object) => {
 }
 
-/**
- * Certain properties, such as the underlying `canvas`, aren't documented because they are considered private
- */
-interface P5Image extends p5.Image {
-    canvas: HTMLCanvasElement;
-    imageData: ImageData;
-}
-
-interface P5Element<T> extends p5.Element {
-    elt: T;
-}
-
 export const isP5Image = (image: object): image is P5Image => {
     return "canvas" in image && "imageData" in image;
 }
 
+export const isRank = <R extends Rank>(tensor: Tensor, rank: R): tensor is Tensor<R> => {
+    return tensor.rankType === rank;
+}
+
+export const is3D = (tensor: Tensor): tensor is Tensor3D => {
+    return tensor.rankType === Rank.R3;
+}
+
+export const is2D = (tensor: Tensor): tensor is Tensor2D => {
+    return tensor.rankType === Rank.R2;
+}
+
+
+
+
 // TODO: consistency between minimal and complete p5 objects
 // does the wrapped version need to return the original?  Or can it just discard p5 and use the underlying element?
-export type Convertible = TfImageSource | P5Element<TfImageSource> | P5Image | {elt: TfImageSource} | {canvas: HTMLCanvasElement};
+export type Convertible =
+    Tensor
+    | TfImageSource
+    | P5Element<MediaElement>
+    | P5Image
+    | { elt: MediaElement }
+    | { canvas: HTMLCanvasElement };
 
-const wrap = (image: Convertible): ImageWrapper => {
+/**
+ * Overloads allow for the specific type to be known.
+ * @param image
+ * @param options
+ */
+function wrap(image: Tensor, options?: ImageConvertOptions): TensorWrapper;
+function wrap(image: { elt: HTMLCanvasElement } | { canvas: HTMLCanvasElement } | P5Image, options?: ImageConvertOptions): CanvasWrapper;
+function wrap<T extends MediaElement>(image: T | { elt: T } | P5Element<T>, options?: ImageConvertOptions): ElementWrapper<T>;
+function wrap(image: ImageData, options?: ImageConvertOptions): ImageDataWrapper;
+function wrap(image: Convertible, options?: ImageConvertOptions): ImageWrapper;
+function wrap(image: Convertible, options?: ImageConvertOptions): ImageWrapper {
 
     /* TODO: guard instance checks
     tf code:
@@ -252,26 +346,27 @@ if ((pixels as PixelData).data instanceof Uint8Array) {
     typeof (HTMLImageElement) !== 'undefined' &&
     pixels instanceof HTMLImageElement) {
 */
-    if ( "canvas" in image ) {
-        return new CanvasWrapper(image.canvas);
+    if ("canvas" in image) {
+        return new CanvasWrapper(image.canvas, options);
     }
-    if ( "elt" in image ) {
-        return wrap(image.elt);
+    if ("elt" in image) {
+        return wrap(image.elt, options);
     }
     if (image instanceof Tensor) {
-        return new TensorWrapper(image);
+        if (!(is3D(image) || is2D(image))) {
+            throw new Error(`Invalid tensor. Image tensor must be rank R3 (color) or R2 (grayscale), but encountered rank ${image.rankType}`);
+        }
+        return new TensorWrapper(image, options);
     }
     if (image instanceof HTMLCanvasElement) {
-        return new CanvasWrapper(image);
+        return new CanvasWrapper(image, options);
     }
     if (image instanceof HTMLImageElement || image instanceof HTMLVideoElement) {
-        return new ElementWrapper(image);
+        return new ElementWrapper(image, options);
     }
     if (image instanceof ImageData) {
-        return new ImageDataWrapper(image);
-    }
-
-    else {
+        return new ImageDataWrapper(image, options);
+    } else {
         throw new Error("Invalid image type");
         // TODO: better error message
         /*
@@ -285,10 +380,37 @@ if ((pixels as PixelData).data instanceof Uint8Array) {
     }
 }
 
+export type SyncConvertible = Exclude<Convertible, Tensor>
+
+// TODO: figure this out better and combine with above
+export const toSyncConverter = (image: SyncConvertible, options?: ImageConvertOptions): CanvasConverter => {
+    if ("canvas" in image) {
+        return new CanvasConverter(image.canvas, options);
+    }
+    if ("elt" in image) {
+        return toSyncConverter(image.elt, options);
+    }
+    if (image instanceof HTMLCanvasElement) {
+        return new CanvasConverter(image, options);
+    }
+    if (image instanceof HTMLImageElement || image instanceof HTMLVideoElement) {
+        const wrapper = new ElementWrapper(image, options);
+        return new CanvasConverter(wrapper.createCanvas(), options);
+    }
+    if (image instanceof ImageData) {
+        const wrapper = new ImageDataWrapper(image, options);
+        return new CanvasConverter(wrapper.createCanvas(), options);
+    } else {
+        throw new Error("Invalid image type");
+    }
+}
+
 export default wrap;
 
-export const toBlob = (image: Convertible, type?: string) => {
-    return wrap(image).toBlob(type);
+// Quick & dirty helpers.  Will not be performant when doing multiple conversions for the same image.
+
+export const toBlob = (image: Convertible) => {
+    return wrap(image).toBlob();
 }
 
 export const toTensor = (image: Convertible) => {
@@ -299,11 +421,10 @@ export const toImageData = (image: Convertible) => {
     return wrap(image).toData();
 }
 
-export const toPixels = async (image: Convertible): Promise<Uint8ClampedArray> => {
-    const imageData = await toImageData(image);
-    return imageData.data;
+export const toPixels = (image: Convertible) => {
+    return wrap(image).toPixels();
 }
 
-export const toImage = (image: Convertible, type?: string) => {
-    return wrap(image).toImage(type);
+export const toImage = (image: Convertible) => {
+    return wrap(image).toImage();
 }

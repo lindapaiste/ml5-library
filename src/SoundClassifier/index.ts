@@ -11,7 +11,7 @@ import * as tf from '@tensorflow/tfjs';
 import * as speechCommands from './speechcommands';
 import callCallback, {Callback} from '../utils/callcallback';
 import {ArgSeparator} from "../utils/argSeparator";
-import {LabelAndConfidence} from "../ImageClassifier";
+import {LabelAndConfidence} from "../utils/gettopkclasses";
 
 const MODEL_OPTIONS = ['speechcommands18w'];
 
@@ -60,12 +60,12 @@ class SoundClassifier {
     return this;
   }
 
-  async classifyInternal(numberOfClasses?: number, callback?: Callback<LabelAndConfidence[]>): Promise<LabelAndConfidence[]> {
+  async classifyInternal(numberOfClasses?: number): Promise<LabelAndConfidence[]> {
     // Wait for the model to be ready
     await this.ready;
     await tf.nextFrame();
 
-    return callCallback(this.model!.classify(numberOfClasses), callback);
+    return this.model!.classify(numberOfClasses);
   }
 
   /**
@@ -77,7 +77,7 @@ class SoundClassifier {
    */
   async classify(numOrCallback: number | Callback<LabelAndConfidence[]>, cb?: Callback<LabelAndConfidence[]>): Promise<LabelAndConfidence[]> {
     const {number, callback} = new ArgSeparator(numOrCallback, cb);
-    return this.classifyInternal(number, callback);
+    return callCallback(this.classifyInternal(number), callback);
   }
 }
 

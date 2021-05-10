@@ -10,7 +10,7 @@ SketchRNN
 import * as ms from '@magenta/sketch';
 import callCallback from '../utils/callcallback';
 import modelPaths from './models';
-import modelLoader from '../utils/modelLoader';
+import {getModelPath} from '../utils/modelLoader';
 
 /**
  * Combine a model name like 'cat' and a size into a the absolute URL for the model on google cloud storage
@@ -55,7 +55,7 @@ class SketchRNN {
             ...options
         };
         // see if the model is an accepted name or a URL
-        const modelUrl = modelPaths.has(model) ? createPath(model, this.config.large) : modelLoader.getModelPath(model);
+        const modelUrl = modelPaths.has(model) ? createPath(model, this.config.large) : getModelPath(model);
         // create the model
         this.model = new ms.SketchRNN(modelUrl);
         this.penState = this.model.zeroInput();

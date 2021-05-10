@@ -1004,5 +1004,4 @@ export default [
     "stole",
     "carbonara",
     "dumbbell",
-    
 ]

@@ -19,6 +19,11 @@ interface ManifestContents {
     labels: string[];
 }
 
+// TODO: make compatible with other generated images
+type CVAEResult = Pick<GeneratedImageResult, 'src' | 'image'> & {
+    raws: Uint8ClampedArray;
+}
+
 /**
  * The fully-loaded, callable model.
  */
@@ -38,7 +43,7 @@ class CvaeModel {
      * Generate a random image for a given label.
      * @param label - A label of the feature your want to generate
      */
-    public async generate(label: string): Promise<GeneratedImageResult> {
+    public async generate(label: string): Promise<CVAEResult> {
         const cursor = this.labels.indexOf(label);
         if (cursor < 0) {
             throw new Error(`Label "${label}" is not one of the valid labels for this model`);
@@ -62,8 +67,7 @@ class CvaeModel {
 
         return {
             ...result,
-            // @ts-ignore adding typo property for backwards-compatibility
-            raws: result.raw
+            raws: result.raw.data
         }
         // TODO: fix "raw" / "raws" inconsistency
     }
@@ -98,7 +102,7 @@ class Cvae {
     })(), callback)
   }
 
-  async generate(label: string, callback?: Callback<GeneratedImageResult>) {
+  async generate(label: string, callback?: Callback<CVAEResult>): Promise<CVAEResult> {
     await this.ready;
     return callCallback(this.cvae!.generate(label), callback);
   }

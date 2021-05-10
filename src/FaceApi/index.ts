@@ -11,8 +11,9 @@ import * as tf from "@tensorflow/tfjs";
 import * as faceapi from "face-api.js";
 import callCallback, {Callback} from "../utils/callcallback";
 import {ArgSeparator} from "../utils/argSeparator";
-import modelLoader from "../utils/modelLoader";
+import {getModelPath} from "../utils/modelLoader";
 import {TinyYolov2Options} from "face-api.js";
+import {Gender} from "face-api.js/build/commonjs/ageGenderNet/types";
 
 /**
  * Settings for the combined model.
@@ -95,6 +96,14 @@ interface FaceApiConfig extends FaceApiBasicOptions, HasModelUrls {
 
 interface FaceApiOptions extends FaceApiBasicOptions, FaceApiModelUrls {
 
+}
+
+
+type GeneralizedDetection = {
+    landmarks?: faceapi.FaceLandmarks68;
+    expressions?: faceapi.FaceExpressions;
+    gender?: faceapi.Gender;
+    genderProbability?: number;
 }
 
 /**
@@ -198,7 +207,7 @@ class FaceApiBase {
     async loadModel() {
         Object.keys(this.config.MODEL_URLS).forEach(item => {
             if (MODEL_NAMES.includes(item)) {
-                this.config.MODEL_URLS[item] = modelLoader.getModelPath(this.config.MODEL_URLS[item]);
+                this.config.MODEL_URLS[item] = getModelPath(this.config.MODEL_URLS[item]);
             }
         });
 

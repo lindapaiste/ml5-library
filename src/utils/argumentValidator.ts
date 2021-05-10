@@ -1,5 +1,5 @@
 import {extractImageElement, extractVideoElement, TfImageSource} from "./imageUtilities";
-import modelLoader from "./modelLoader";
+import {getModelPath} from "./modelLoader";
 
 export interface ArgumentValidator<T> {
     /**
@@ -62,7 +62,7 @@ const modelPath = (extension: string): ArgumentValidator<string> => ({
     textDescription: `a url of a model in ${extension} format`,
     validate: (arg: any) => {
         if (typeof arg === "string" && arg.endsWith(extension)) {
-            return modelLoader.getModelPath(arg);
+            return getModelPath(arg);
         }
     },
 })

@@ -6,10 +6,10 @@
 // Utils for sampling
 
 // Sample from a distribution
-const sampleFromDistribution = (input) => {
+const sampleFromDistribution = (input: any[]): number => {
   const randomValue = Math.random();
   let sum = 0;
-  let result;
+  let result = -1;
   for (let j = 0; j < input.length; j += 1) {
     sum += input[j];
     if (randomValue < sum) {

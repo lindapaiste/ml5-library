@@ -27,7 +27,7 @@ export interface Classification {
  * @param {string[]} CLASSES - Array of labels.
  * @return {Classification[]} - Array of objects with properties probability and className.
  */
-export function getTopKClassesFromArray(values: number[] | Float32Array, k: number, CLASSES: string[] | Record<number, string>) {
+export function getTopKClassesFromArray(values: number[] | Float32Array, k: number, CLASSES: string[] | Record<number, string>): Classification[] {
     const labeled = [...values].map((value, i) => ({
         className: CLASSES[i],
         probability: value
@@ -44,7 +44,7 @@ export function getTopKClassesFromArray(values: number[] | Float32Array, k: numb
  * @param {string[]} CLASSES - Array of labels.
  * @return {Promise<Classification[]>} - Array of objects with properties probability and className.
  */
-export async function getTopKClassesFromTensor(logits: Tensor, k: number, CLASSES: string[] | Record<number, string>) {
+export async function getTopKClassesFromTensor(logits: Tensor, k: number, CLASSES: string[] | Record<number, string>): Promise<Classification[]> {
     const topK = await logits.topk(k);
     /**
      * @type Float32Array
@@ -62,5 +62,15 @@ export async function getTopKClassesFromTensor(logits: Tensor, k: number, CLASSE
         probability,
     }));
 }
+
+export interface LabelAndConfidence {
+    label: string;
+    confidence: number;
+}
+
+export const toLabelAndConfidence = ({className, probability}: Classification): LabelAndConfidence => ({
+    label: className,
+    confidence: probability
+})
 
 export default {getTopKClassesFromArray, getTopKClassesFromTensor};
