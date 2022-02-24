@@ -18,7 +18,7 @@ let collecting = false;
 function setup() {
   createCanvas(360, 270);
 
-  // Creat the video and start face tracking
+  // Create the video and start face tracking
   video = createCapture(VIDEO);
   video.size(width, height);
   // Only need landmarks for this example

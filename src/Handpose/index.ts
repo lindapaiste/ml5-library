@@ -17,7 +17,7 @@ import {EventEmitter} from "events";
 import callCallback, {Callback} from "../utils/callcallback";
 import {extractImageElement, ImageArg, VideoArg} from "../utils/imageUtilities";
 import {ArgSeparator} from "../utils/argSeparator";
-import {createClass, createFactory} from "../utils/MediaModel";
+import {createClass, createFactory} from "../utils/model-composition/MediaModel";
 
 export interface HandposeOptions {
     flipHorizontal?: boolean;

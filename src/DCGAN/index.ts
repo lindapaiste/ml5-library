@@ -62,7 +62,7 @@ class DCGANBase {
      * @param {string} manifestPath
      * @return {this} the dcgan.
      */
-    async loadModel(manifestPath: string): Promise<this> {
+    private async loadModel(manifestPath: string): Promise<this> {
         // loads the manifest.json, which contains the relative path to the model.json.
         this.modelInfo = await loadFile<ModelInfo>(manifestPath);
 
@@ -82,7 +82,7 @@ class DCGANBase {
      * @param {object} latentVector - an array containing the latent vector; otherwise use random vector
      * @return {object} a tensor
      */
-    async compute(latentDim: number, latentVector?: number[]): Promise<tf.Tensor3D> {
+    private async compute(latentDim: number, latentVector?: number[]): Promise<tf.Tensor3D> {
         await this.ready;
         return tf.tidy(() => {
             let z;
@@ -107,7 +107,7 @@ class DCGANBase {
      * @param {object} latentVector - an array containing the latent vector; otherwise use random vector
      * @return {object} a promise or the result of the callback function.
      */
-    async generate(callback: Callback<GeneratedImageResult>, latentVector?: number[]): Promise<GeneratedImageResult> {
+    public async generate(callback: Callback<GeneratedImageResult>, latentVector?: number[]): Promise<GeneratedImageResult> {
         await this.ready;
         return callCallback(this.generateInternal(latentVector), callback);
     }
@@ -117,7 +117,7 @@ class DCGANBase {
      * @param {object} latentVector - an array containing the latent vector; otherwise use random vector
      * @return {object} includes blob, raw, and tensor. if P5 exists, then a p5Image
      */
-    async generateInternal(latentVector?: number[]): Promise<GeneratedImageResult> {
+    private async generateInternal(latentVector?: number[]): Promise<GeneratedImageResult> {
         const {modelLatentDim} = this.modelInfo!;
         const imageTensor = await this.compute(modelLatentDim, latentVector);
 

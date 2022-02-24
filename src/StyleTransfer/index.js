@@ -10,7 +10,7 @@ The original TensorFlow implementation was developed by Logan Engstrom: github.c
 */
 
 import * as tf from '@tensorflow/tfjs';
-import Video from './../utils/Video';
+import Video from '../utils/model-composition/Video';
 import CheckpointLoader from '../utils/checkpointLoader';
 import callCallback from '../utils/callcallback';
 import {ArgSeparator} from "../utils/argSeparator";

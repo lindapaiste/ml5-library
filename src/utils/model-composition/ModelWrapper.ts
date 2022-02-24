@@ -1,8 +1,8 @@
-import callCallback, {Callback} from "./callcallback";
+import callCallback, {Callback} from "../callcallback";
 import {EventEmitter} from "events";
-import {TfImageSource, videoLoaded} from "./imageUtilities";
-import {Convertible} from "./imageConversion";
-import {ArgSeparator, BasicArgs} from "./argSeparator";
+import {TfImageSource, videoLoaded} from "../imageUtilities";
+import {Convertible} from "../imageConversion";
+import {ArgSeparator, BasicArgs} from "../argSeparator";
 import * as tf from "@tensorflow/tfjs";
 
 type InnerModel<T> = T extends {model?: infer M} ? M : never;
@@ -72,7 +72,7 @@ export class AroundModel<Model> {
     }
 }
 
-type ConstructorArgs<Options> = BasicArgs & {
+export type ConstructorArgs<Options> = BasicArgs & {
     options?: Options;
 }
 
@@ -91,7 +91,7 @@ export abstract class AbstractImageVideoModel<Model, Options> extends EventEmitt
     public config: Options;
     public video?: HTMLVideoElement;
 
-    constructor({options, video}: { options?: Options; video?: HTMLVideoElement } | undefined = {}) {
+    constructor({options, video}: { options?: Partial<Options>; video?: HTMLVideoElement } | undefined = {}) {
         super();
 
         this.video = video;
@@ -168,27 +168,3 @@ export abstract class AbstractImageVideoModel<Model, Options> extends EventEmitt
 
 export type ValueOf<T> = T[keyof T];
 
-/**
- * Couldn't pass Callback to the constructor due to Typescript this type issues, so call it here.
- */
-export const createFactory = <Model, Options, Instance extends AbstractImageVideoModel<Model, Options>>(constructor: new (obj: ConstructorArgs<Options>) => Instance) => {
-    // TODO: clean up these types for better inference
-    function factory(...args: Array<ValueOf<ConstructorArgs<Options>>>): Promise<Instance>;
-    function factory(...args: Array<ValueOf<ConstructorArgs<Options>> | Callback<Instance>>): Instance;
-    function factory(...args: any[]) {
-        const {callback, ...rest} = new ArgSeparator(...args);
-
-        const instance = new constructor(rest as ConstructorArgs<Options>);
-        if ( callback) {
-            callCallback(instance.ready, callback);
-            return instance;
-        }
-        else {
-            return callCallback(instance.ready);
-        }
-    }
-
-    return factory;
-}
-
-export const

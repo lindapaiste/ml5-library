@@ -9,7 +9,7 @@ A class that extract features from Mobilenet
 
 import * as tf from "@tensorflow/tfjs";
 import axios from "axios";
-import Video from "./../utils/Video";
+import Video from "../utils/model-composition/Video";
 import {imgToTensor} from "../utils/imageUtilities";
 import {saveBlob} from "../utils/io";
 import callCallback from "../utils/callcallback";

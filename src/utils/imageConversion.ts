@@ -1,4 +1,4 @@
-import {browser, image, Rank, tensor, Tensor2D, Tensor3D} from "@tensorflow/tfjs-core";
+import {browser, Rank, Tensor2D, Tensor3D} from "@tensorflow/tfjs-core";
 import {createSizedCanvas, getCtx, MediaElement, TfImageSource} from "./imageUtilities";
 import {Tensor} from "@tensorflow/tfjs";
 import {P5Element, P5Image} from "./p5Utils";
@@ -298,6 +298,16 @@ export const isRank = <R extends Rank>(tensor: Tensor, rank: R): tensor is Tenso
     return tensor.rankType === rank;
 }
 
+/**
+ * Throw an error if the tensor is not the correct rank
+ */
+export const validateRank = <R extends Rank>(tensor: Tensor, rank: R, variableName = ""): Tensor<R> => {
+    if (!isRank(tensor, rank)) {
+        throw new Error(`Tensor variable ${variableName} has incorrect rank ${tensor.rankType}. Rank must be ${rank}.`);
+    }
+    return tensor;
+}
+
 export const is3D = (tensor: Tensor): tensor is Tensor3D => {
     return tensor.rankType === Rank.R3;
 }
@@ -305,8 +315,6 @@ export const is3D = (tensor: Tensor): tensor is Tensor3D => {
 export const is2D = (tensor: Tensor): tensor is Tensor2D => {
     return tensor.rankType === Rank.R2;
 }
-
-
 
 
 // TODO: consistency between minimal and complete p5 objects

@@ -13,7 +13,7 @@ import {ArgSeparator, BasicArgs} from "../utils/argSeparator";
 import {ImageArg, TfImageSource, VideoArg} from "../utils/imageUtilities";
 import {Callback} from "../utils/callcallback";
 import {LabelAndConfidence} from "../utils/gettopkclasses";
-import {AbstractImageVideoModel} from "../utils/ModelWrapper";
+import {AbstractImageVideoModel} from "../utils/model-composition/ModelWrapper";
 
 
 export type ObjectDetectorOptions = YoloOptions & CocoSsdOptions;

@@ -1,5 +1,5 @@
-import {ArgumentValidator, classifyArguments, ValidatedResults} from "./argumentValidator";
-import callCallback, {Callback} from "./callcallback";
+import {ArgumentValidator, classifyArguments, ValidatedResults} from "../argumentValidator";
+import callCallback, {Callback} from "../callcallback";
 
 export type AsArgs<ArgMap extends Record<string, ArgumentValidator<any>>> = {
     [K in keyof ArgMap]: ReturnType<ArgMap[K]['validate']>;

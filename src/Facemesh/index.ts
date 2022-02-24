@@ -14,7 +14,8 @@ import { EventEmitter } from "events";
 import callCallback, {Callback} from "../utils/callcallback";
 import {ArgSeparator} from "../utils/argSeparator";
 import {TfImageSource} from "../utils/imageUtilities";
-import {AbstractImageVideoModel, createFactory} from "../utils/ModelWrapper";
+import {AbstractImageVideoModel} from "../utils/model-composition/ModelWrapper";
+import {createFactory} from "../utils/model-composition/AsyncModel";
 
 interface FacemeshOptions {
   maxContinuousChecks?: number;

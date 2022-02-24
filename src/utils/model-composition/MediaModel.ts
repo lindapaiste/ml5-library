@@ -1,9 +1,9 @@
 import {EventEmitter} from "events";
-import callCallback, {Callback} from "./callcallback";
-import {TfImageSource, VideoArg, videoLoaded} from "./imageUtilities";
+import callCallback, {Callback} from "../callcallback";
+import {TfImageSource, VideoArg, videoLoaded} from "../imageUtilities";
 import MediaWrapper from "./MediaWrapper";
-import {Convertible} from "./imageConversion";
-import {ArgSeparator} from "./argSeparator";
+import {Convertible} from "../imageConversion";
+import {ArgSeparator} from "../argSeparator";
 import * as tf from "@tensorflow/tfjs";
 
 type InnerModel<T> = T extends { model?: infer M } ? M : never;

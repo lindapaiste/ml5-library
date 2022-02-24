@@ -26,6 +26,7 @@ export interface BasicArgs {
     callback?: Function;
     string?: string;
     number?: number;
+    array?: any[];
 }
 
 /**
@@ -37,7 +38,7 @@ export interface BasicArgs {
  * @property {Object} [options]
  * @property {function} [callback]
  */
-export class ArgSeparator<Args extends any[]> implements BasicArgs{
+export class ArgSeparator<Args extends any[]> implements BasicArgs {
 
     /**
      * Strict types here mean no errors when destructuring,
@@ -45,10 +46,11 @@ export class ArgSeparator<Args extends any[]> implements BasicArgs{
      */
     image?: TfImageSource;
     video?: HTMLVideoElement;
-    options?: Exclude<Extract<Element<Args>, object>, ImageArg | Function>;
+    options?: Exclude<Extract<Element<Args>, object>, ImageArg | Function | any[]>;
     callback?: Extract<Element<Args>, Function>;
     string?: string;
     number?: number;
+    array?: any[];
 
     /**
      * Arguments used to CREATE an image-based model can be:
@@ -110,6 +112,10 @@ export class ArgSeparator<Args extends any[]> implements BasicArgs{
                         this.video = image;
                     }
                 }
+                // check for arrays
+                else if (Array.isArray(arg)) {
+                    this.array = arg;
+                }
                 // objects which are not images are assumed to be options
                 else {
                     this.options = arg;
@@ -135,10 +141,10 @@ export class ArgSeparator<Args extends any[]> implements BasicArgs{
      * @param message
      */
     require<K extends keyof this>(property: K, message?: string): this & Record<K, NonNullable<this[K]>> {
-        if ( this.hasProperty(property)) {
+        if (this.hasProperty(property)) {
             return this;
         }
-        throw new Error( message || `An argument for ${property} must be provided.`);
+        throw new Error(message || `An argument for ${property} must be provided.`);
     }
 }
 
@@ -146,8 +152,8 @@ export class ArgSeparator<Args extends any[]> implements BasicArgs{
  * Can validate that an image or video is among a specific list of supported types.
  * Types must be classes that can be verified with instanceof.
  */
-export const createImageChecker = (...validClasses) => ( variable: any ): void => {
-    if ( ! validClasses.some( c => variable instanceof c )) {
+export const createImageChecker = (...validClasses) => (variable: any): void => {
+    if (!validClasses.some(c => variable instanceof c)) {
         throw new Error(`Invalid media type. Must be one of: ${validClasses.map(c => c.name).join(", ")}`);
     }
 }

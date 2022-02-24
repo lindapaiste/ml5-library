@@ -7,7 +7,7 @@
 Image and Video base class
 */
 
-import {extractVideoElement, VideoArg} from "./imageUtilities";
+import {extractVideoElement, VideoArg} from "../imageUtilities";
 
 class Video {
 

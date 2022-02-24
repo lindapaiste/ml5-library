@@ -1,8 +1,8 @@
 import {createModel} from "./modelBuilder";
-import {ARGS} from "./argumentValidator";
+import {ARGS} from "../argumentValidator";
 import * as handposeCore from "@tensorflow-models/handpose";
 import * as faceapiCore from "face-api.js";
-import {HandposeOptions} from "../Handpose";
+import {HandposeOptions} from "../../Handpose";
 
 const handpose = createModel({
     acceptsArgs: {
