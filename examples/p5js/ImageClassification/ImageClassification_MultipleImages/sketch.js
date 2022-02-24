@@ -8,14 +8,14 @@ ml5 Example
 Multiple Image classification using MobileNet and p5.js
 === */
 
-// Initialize the Image Classifier method using MobileNet
-let classifier;
 
-let img;
+let classifier;
 let currentIndex = 0;
 const allImages = [];
 const predictions = [];
+let data;
 
+// Initialize the Image Classifier method using MobileNet
 function preload() {
   classifier = ml5.imageClassifier("MobileNet");
   data = loadJSON("assets/data.json");
@@ -29,10 +29,9 @@ function setup() {
 }
 
 function appendImages() {
-  for (i = 0; i < data.images.length; i += 1) {
-    imgPath = data.images[i];
+  data.images.forEach(imgPath => {
     allImages.push(`images/dataset/${imgPath}`);
-  }
+  });
 }
 
 // When the image has been loaded,
@@ -43,10 +42,7 @@ function imageReady(img) {
 }
 
 function savePredictions() {
-  predictionsJSON = {
-    predictions,
-  };
-  saveJSON(predictionsJSON, "predictions.json");
+  saveJSON({ predictions }, "predictions.json");
 }
 
 // When we get the results
@@ -54,9 +50,10 @@ function gotResult(err, results) {
   // If there is an error, show in the console
   if (err) {
     console.error(err);
+    return;
   }
 
-  information = {
+  const information = {
     name: allImages[currentIndex],
     result: results,
   };
