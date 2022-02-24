@@ -87,7 +87,6 @@ class ImageClassifier {
   }
 
   async loadModelFrom(path = null) {
-    try {
       let data;
       if (path !== null) {
         const result = await axios.get(path);
@@ -116,10 +115,6 @@ class ImageClassifier {
       }
       this.model = await tf.loadLayersModel(path);
       return this.model;
-    } catch (err) {
-      console.error(err);
-      return err;
-    }
   }
 
   /**

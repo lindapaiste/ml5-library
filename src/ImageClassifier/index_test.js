@@ -120,8 +120,27 @@ describe('imageClassifier', () => {
         })
           .then(results => expect(results[0].label).toBe('robin, American robin, Turdus migratorius'));
       });
+
+      it('Should require an image to classify', async () => {
+        await expect(() => classifier.classify()).toThrowError();
+      })
     });
 
+  });
+
+  /**
+   * Check error handling behaviors
+   */
+  describe('error handling', () => {
+
+    it('Requires a model name or url', async () => {
+      await expect(() => imageClassifier()).toThrowError();
+    });
+
+    it('Throws errors when it cannot create a model', async () => {
+      imageClassifier('invalid model name').then(results => console.log("success", results)).catch(error => console.log("error", error));
+      await expect(() => imageClassifier('invalid model name')).toThrowError();
+    });
   });
 });
 
