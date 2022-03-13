@@ -24,6 +24,10 @@ export default {
   module: {
     rules: [
       {
+        test: /\.ts$/,
+        loader: "ts-loader"
+      },
+      {
         enforce: "pre",
         test: /\.js$/,
         exclude: /node_modules/,
@@ -35,6 +39,9 @@ export default {
         include,
       },
     ],
+  },
+  resolve: {
+    extensions: [".ts", ".js"]
   },
   node: {
     fs: "empty",

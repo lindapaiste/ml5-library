@@ -1,27 +1,36 @@
+import { tensor3d } from "@tensorflow/tfjs";
 import * as tf from "@tensorflow/tfjs";
+import type p5 from 'p5';
+import { createCanvas, Image as cImage , ImageData as cImageData } from "canvas";
+
 /**
  * @typedef ImageElement
  * @type {HTMLImageElement | HTMLCanvasElement | HTMLVideoElement}
  */
+export type ImageElement = HTMLImageElement | HTMLCanvasElement | HTMLVideoElement
+
+export type PixelData = { data: Uint8Array; width: number; height: number }
 
 /**
  * Standard input accepted by most TensorFlow models.
  * @typedef InputImage
  * @type {ImageData | HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | tf.Tensor3D}
  */
+export type InputImage = ImageData | HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | tf.Tensor3D
 
 /**
  * ML5 models accept all TensorFlow image inputs as well as p5 images and videos.
  * @typedef ImageArg
  * @type {InputImage | p5.Image | p5.Video | p5.Element}
  */
+export type ImageArg = InputImage | p5.Image | p5.Element | p5.Graphics | cImage | cImageData | PixelData
 
 /**
  * Check if a variable is an HTMLVideoElement.
  * @param {any} img
  * @returns {img is HTMLVideoElement}
  */
-export const isVideo = (img) => {
+export const isVideo = (img: unknown): img is HTMLVideoElement => {
   // Must guard all instanceof checks on DOM elements in order to run in node.
   return typeof (HTMLVideoElement) !== 'undefined' &&
     img instanceof HTMLVideoElement;
@@ -32,7 +41,7 @@ export const isVideo = (img) => {
  * @param {any} img
  * @returns {img is HTMLCanvasElement}
  */
-export const isCanvas = (img) => {
+export const isCanvas = (img: unknown): img is HTMLCanvasElement => {
   return typeof (HTMLCanvasElement) !== 'undefined' &&
     img instanceof HTMLCanvasElement;
 }
@@ -42,7 +51,7 @@ export const isCanvas = (img) => {
  * @param {any} img
  * @returns {img is HTMLImageElement}
  */
-export const isImg = (img) => {
+export const isImg = (img: unknown): img is HTMLImageElement => {
   return typeof (HTMLImageElement) !== 'undefined' &&
     img instanceof HTMLImageElement;
 }
@@ -52,7 +61,7 @@ export const isImg = (img) => {
  * @param {p5.Element | p5.Image} img
  * @returns {img is p5.Element | p5.Image}
  */
-export const isP5Image = (img) => {
+export const isP5Image = (img: object): img is p5.Image | p5.Graphics | p5.Element => {
   return 'elt' in img || 'canvas' in img;
 }
 
@@ -63,7 +72,7 @@ export const isP5Image = (img) => {
  * @param {any} img
  * @returns {img is ImageData}
  */
-export const isImageData = (img) => {
+export const isImageData = (img: any): img is ImageData => {
   if (typeof (ImageData) === 'undefined') {
     return (
       typeof img === 'object' &&
@@ -81,7 +90,7 @@ export const isImageData = (img) => {
  * @param {any} img
  * @returns {img is tf.Tensor3D}
  */
-export const isTensor3D = (img) => {
+export const isTensor3D = (img: unknown): img is tf.Tensor3D => {
   return img instanceof tf.Tensor && img.rank === 3;
 }
 
@@ -90,7 +99,7 @@ export const isTensor3D = (img) => {
  * @param {any} img
  * @returns {img is ImageElement}
  */
-export const isImageElement = (img) => {
+export const isImageElement = (img: unknown): img is ImageElement => {
   return !!img && (isCanvas(img) || isImg(img) || isVideo(img));
 }
 
@@ -101,7 +110,7 @@ export const isImageElement = (img) => {
  * @param {any} img
  * @returns {ImageElement | null}
  */
-export const getImageElement = (img) => {
+export const getImageElement = (img: any): ImageElement | null => {
   if (isImageElement(img)) {
     return img;
   }
@@ -114,6 +123,31 @@ export const getImageElement = (img) => {
     }
   }
   return null;
+}
+
+const convertImageData = ({width, height, data}: PixelData | ImageData): tf.Tensor3D => {
+  return tf.browser.fromPixels({width, height, data: new Uint8Array(data)});
+}
+
+export const handlePolyfill = (img: any): tf.Tensor3D | null => {
+  if ( isImageData(img) ) {
+    return convertImageData(img)
+  }
+  if ( img instanceof cImage) {
+    const canvas = createCanvas(img.width, img.height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, img.width, img.height);
+    const data = ctx.getImageData(0, 0, img.width, img.height);
+    return convertImageData(data);
+  }
+  return null;
+}
+
+export const toTensor = (img: InputImage): tf.Tensor3D => {
+  if ( isTensor3D(img)) {
+    return img;
+  }
+  return tf.browser.fromPixels(img);
 }
 
 /**
@@ -140,7 +174,20 @@ export const getImageElement = (img) => {
  * @class ArgHelper
  * @implements {StandardArguments}
  */
-class ArgHelper {
+class ArgHelper<Args extends any[]> {
+
+  /**
+   * Strict types here mean no errors when destructuring,
+   * but makes assignment inside this class tougher.
+   */
+  image?: InputImage;
+  video?: HTMLVideoElement;
+  audio?: HTMLMediaElement;
+  options?: Exclude<Extract<Args[number], object>, ImageArg | Function | any[]>;
+  callback?: Extract<Args[number], Function>;
+  string?: string;
+  number?: number;
+  array?: any[];
   /**
    * Arguments used to CREATE an image-based model can be:
    *  - video: an HTMLVideoElement or p5 video.
@@ -162,7 +209,7 @@ class ArgHelper {
    *
    *  @param {any[]} [args]
    */
-  constructor(...args) {
+  constructor(...args: any[]) {
     args.forEach((arg) => this.addArg(arg));
   }
 
@@ -171,7 +218,7 @@ class ArgHelper {
    *
    * @param {any} arg
    */
-  addArg(arg) {
+  addArg(arg: any) {
     // skip over falsey arguments and don't throw any error, assuming that these are omissions
     // do this check first to prevent accessing properties on null, which is an object
     if (arg === undefined || arg === null) {
@@ -224,7 +271,7 @@ class ArgHelper {
    * @param {string & keyof StandardArguments} property
    * @returns {boolean}
    */
-  has(property) {
+  has<K extends keyof this>(property: K): this is this & Record<K, NonNullable<this[K]>> {
     return this[property] !== undefined;
   }
 
@@ -235,7 +282,7 @@ class ArgHelper {
    * @param {string} [message]
    * @return {this}
    */
-  require(property, message) {
+  require<K extends keyof this>(property: K, message?: string): this & Record<K, NonNullable<this[K]>> {
     if (this.has(property)) {
       return this;
     }
@@ -249,6 +296,6 @@ class ArgHelper {
  * @param {any[]} args
  * @return {ArgHelper}
  */
-export default function handleArguments(...args) {
+export default function handleArguments(...args: any[]) {
   return new ArgHelper(...args);
 };

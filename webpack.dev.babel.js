@@ -22,5 +22,5 @@ export default merge(common, {
     new HtmlWebpackPlugin({
       title: "ml5",
     }),
-  ],
+  ]
 });

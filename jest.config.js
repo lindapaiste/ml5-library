@@ -86,7 +86,7 @@ module.exports = {
   passWithNoTests: true,
 
   // A preset that is used as a base for Jest's configuration
-  // preset: undefined,
+  preset: "ts-jest", // undefined,
 
   // Run tests from one or more projects
   // projects: undefined,
@@ -130,7 +130,7 @@ module.exports = {
   // snapshotSerializers: [],
 
   // The test environment that will be used for testing
-  testEnvironment: "jsdom",
+  testEnvironment: "node", // "jsdom",
 
   // Options that will be passed to the testEnvironment
   testEnvironmentOptions: {
@@ -153,8 +153,9 @@ module.exports = {
 
   // The regexp pattern or array of patterns that Jest uses to detect test files
   testRegex: [
-    "(/__tests__/.*|(\\.|/)(test|spec))\\.[jt]sx?$",
-    "_test\\.js"
+    // "(/__tests__/.*|(\\.|/)(test|spec))\\.[jt]sx?$",
+    // "_test\\.js"
+    "_test.ts"
   ],
 
   // This option allows the use of a custom results processor

@@ -35,6 +35,11 @@ module.exports = {
         "no-unused-vars": ["error", { varsIgnorePattern: "^setup$|^draw$|^preload$" }],
         "new-cap": 0,
         "no-underscore-dangle": 0,
+        "import/resolver": {
+          typescript: {} // this loads <rootdir>/tsconfig.json to eslint
+        },
+        "import/extensions": "off",
+        "import/no-unresolved": "off"
       },
     },
     {

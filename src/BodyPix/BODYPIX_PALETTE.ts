@@ -1,4 +1,9 @@
-export default {
+export type BodyPixPalette<C = [number, number, number]> = Record<string, {
+  color: C;
+  id: number;
+}>
+
+const palette: BodyPixPalette = {
   // "none": {
   //     "id": -1,
   //     "color": [0, 0, 0]
@@ -100,3 +105,5 @@ export default {
     "color": [155, 243, 88]
   }
 }
+
+export default palette;
