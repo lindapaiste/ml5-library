@@ -112,8 +112,8 @@
     ]
   },
   "peerDependencies": {
-    "@tensorflow/tfjs-core": "^1.2.9",
-    "@tensorflow/tfjs-converter": "^1.2.9"
+    "@tensorflow/tfjs-core": "^3.14.0",
+    "@tensorflow/tfjs-converter": "^3.14.0"
   },
   "dependencies": {
     "@magenta/sketch": "0.2.0",
@@ -126,8 +126,8 @@
     "@tensorflow-models/posenet": "^2.2.1",
     "@tensorflow-models/speech-commands": "0.3.9",
     "@tensorflow-models/universal-sentence-encoder": "^1.2.2",
-    "@tensorflow/tfjs": "^1.7.0",
-    "@tensorflow/tfjs-vis": "^1.1.0",
+    "@tensorflow/tfjs": "^3.14.0",
+    "@tensorflow/tfjs-vis": "^1.5.1",
     "axios": "^0.21.1",
     "events": "^3.0.0",
     "face-api.js": "~0.22.2",
