@@ -1,146 +1,96 @@
 let faceapi;
 let img;
-let detections;
 const width = 200;
 const height = 200;
-let canvas, ctx;
+let canvas;
+let ctx;
 
 // by default all options are set to true
 const detectionOptions = {
-  withLandmarks: true,
-  withDescriptors: false,
+    withLandmarks: true,
+    withDescriptors: false,
 };
 
 async function make() {
-  img = new Image();
-  img.src = "assets/frida.jpg";
-  img.width = width;
-  img.height = height;
+    img = new Image();
+    img.src = "assets/frida.jpg";
+    img.width = width;
+    img.height = height;
 
-  canvas = createCanvas(width, height);
-  ctx = canvas.getContext("2d");
+    canvas = createCanvas(width, height);
+    ctx = canvas.getContext("2d");
 
-  faceapi = await ml5.faceApi(detectionOptions, modelReady);
+    faceapi = await ml5.faceApi(detectionOptions, modelReady);
 
-  // faceapi.detectSingle(img, gotResults)
+    // faceapi.detectSingle(img, gotResults)
 }
+
 // call app.map.init() once the DOM is loaded
-window.addEventListener("DOMContentLoaded", function() {
-  make();
-});
+window.addEventListener("DOMContentLoaded", make);
 
 function modelReady() {
-  console.log("ready!");
-  faceapi.detectSingle(img, gotResults);
+    console.log("ready!");
+    faceapi.detectSingle(img, gotResults);
 }
 
 function gotResults(err, result) {
-  if (err) {
-    console.log(err);
-    return;
-  }
-  // console.log(result)
-  detections = result;
+    if (err) {
+        console.log(err);
+        return;
+    }
+    // console.log(result)
+    const detections = result;
 
-  ctx.drawImage(img, 0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
 
-  if (detections) {
-    console.log(detections);
-    drawBox(detections);
-    drawLandmarks(detections);
-  }
+    if (detections) {
+        console.log(detections);
+        drawBox(detections);
+        drawLandmarks(detections);
+    }
 }
 
 function drawBox(detections) {
-  const alignedRect = detections.alignedRect;
-  const { _x, _y, _width, _height } = alignedRect._box;
-  // canvas.fillStyle = 'none';
-  ctx.rect(_x, _y, _width, _height);
-  ctx.strokeStyle = "#a15ffb";
-  ctx.stroke();
+    // eslint-disable-next-line prefer-destructuring
+    const box = detections.alignedRect.box;
+    // canvas.fillStyle = 'none';
+    ctx.rect(box.x, box.y, box.width, box.height)
+    ctx.strokeStyle = "#a15ffb";
+    ctx.stroke();
 }
 
 function drawLandmarks(detections) {
-  // mouth
-  ctx.beginPath();
-  detections.parts.mouth.forEach((item, idx) => {
-    if (idx === 0) {
-      ctx.moveTo(item._x, item._y);
-    } else {
-      ctx.lineTo(item._x, item._y);
+    const {mouth, nose, leftEye, rightEye, leftEyeBrow, rightEyeBrow} = detections.parts;
+
+    drawPart(mouth, true);
+    drawPart(nose, false);
+    drawPart(leftEye, true);
+    drawPart(leftEyeBrow, false);
+    drawPart(rightEye, true);
+    drawPart(rightEyeBrow, false);
+}
+
+function drawPart(feature, closed) {
+    ctx.beginPath();
+    feature.forEach((point, i) => {
+        if (i === 0) {
+            ctx.moveTo(point.x, point.y);
+        } else {
+            ctx.lineTo(point.x, point.y);
+        }
+    });
+
+    if (closed === true) {
+        ctx.closePath();
     }
-  });
-  ctx.closePath();
-  ctx.stroke();
-
-  // nose
-  ctx.beginPath();
-  detections.parts.nose.forEach((item, idx) => {
-    if (idx === 0) {
-      ctx.moveTo(item._x, item._y);
-    } else {
-      ctx.lineTo(item._x, item._y);
-    }
-  });
-  ctx.stroke();
-
-  // // left eye
-  ctx.beginPath();
-  detections.parts.leftEye.forEach((item, idx) => {
-    if (idx === 0) {
-      ctx.moveTo(item._x, item._y);
-    } else {
-      ctx.lineTo(item._x, item._y);
-    }
-  });
-  ctx.closePath();
-  ctx.stroke();
-
-  // // right eye
-  ctx.beginPath();
-  detections.parts.rightEye.forEach((item, idx) => {
-    if (idx === 0) {
-      ctx.moveTo(item._x, item._y);
-    } else {
-      ctx.lineTo(item._x, item._y);
-    }
-  });
-
-  ctx.closePath();
-  ctx.stroke();
-
-  // // right eyebrow
-  ctx.beginPath();
-  detections.parts.rightEyeBrow.forEach((item, idx) => {
-    if (idx === 0) {
-      ctx.moveTo(item._x, item._y);
-    } else {
-      ctx.lineTo(item._x, item._y);
-    }
-  });
-  ctx.stroke();
-  // canvas.closePath();
-
-  // // left eyeBrow
-  ctx.beginPath();
-  detections.parts.leftEyeBrow.forEach((item, idx) => {
-    if (idx === 0) {
-      ctx.moveTo(item._x, item._y);
-    } else {
-      ctx.lineTo(item._x, item._y);
-    }
-  });
-  // canvas.closePath();
-
-  ctx.strokeStyle = "#a15ffb";
-  ctx.stroke();
+    ctx.stroke();
 }
 
 // Helper Functions
-function createCanvas(w, h) {
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  document.body.appendChild(canvas);
-  return canvas;
+function createCanvas(w, h){
+    const canvasElement = document.createElement("canvas");
+    canvasElement.width  = w;
+    canvasElement.height = h;
+    document.body.appendChild(canvasElement);
+    return canvasElement;
 }

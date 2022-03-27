@@ -13,8 +13,8 @@ let uNet;
 let segmentationImage;
 const width = 320;
 const height = 240;
-let request;
-let canvas, ctx;
+let canvas;
+let ctx;
 
 async function setup() {
   canvas = document.querySelector("#myCanvas");
@@ -24,8 +24,7 @@ async function setup() {
   // load up your video
   video = document.querySelector("#video");
   // Create a webcam capture
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  video.srcObject = stream;
+  video.srcObject = await navigator.mediaDevices.getUserMedia({video: true});
   video.play();
 
   // Start with a blank image
@@ -54,7 +53,7 @@ function gotResult(error, result) {
 }
 
 function draw() {
-  request = requestAnimationFrame(draw);
+  requestAnimationFrame(draw);
 
   if (Object.prototype.hasOwnProperty.call(segmentationImage, "raw")) {
     // UNET image is 128x128
@@ -64,20 +63,13 @@ function draw() {
 }
 
 function imageDataToCanvas(imageData, w, h) {
-  // console.log(raws, x, y)
-  const arr = Array.from(imageData);
-  const canvas = document.createElement("canvas"); // Consider using offScreenCanvas when it is ready?
-  const ctx = canvas.getContext("2d");
+  const newCanvas = document.createElement("canvas"); // Consider using offScreenCanvas when it is ready?
+  const newCtx = newCanvas.getContext("2d");
 
-  canvas.width = w;
-  canvas.height = h;
+  newCanvas.width = w;
+  newCanvas.height = h;
 
-  const imgData = ctx.createImageData(w, h);
-  // console.log(imgData)
-  const { data } = imgData;
+  newCtx.putImageData(imageData, 0, 0);
 
-  for (let i = 0; i < w * h * 4; i += 1) data[i] = arr[i];
-  ctx.putImageData(imgData, 0, 0);
-
-  return ctx.canvas;
+  return newCtx.canvas;
 }

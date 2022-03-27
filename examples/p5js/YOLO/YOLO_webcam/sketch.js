@@ -45,7 +45,7 @@ function startDetecting() {
 }
 
 function detect() {
-  yolo.detect(function(err, results) {
+  yolo.detect((err, results) => {
     objects = results;
     detect();
   });

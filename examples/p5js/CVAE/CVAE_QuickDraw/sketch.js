@@ -33,9 +33,9 @@ function gotImage(error, result) {
 function modelReady() {
   // Create dropdown with all possible labels
   dropdown = createSelect();
-  for (const label of cvae.labels) {
+  cvae.labels.forEach(label => {
     dropdown.option(label);
-  }
+  });
 }
 
 function generateImage() {

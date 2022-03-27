@@ -27,11 +27,9 @@ function setup() {
   // Initialize the Image Classifier method with MobileNet and the video as the second argument
   classifier = ml5.imageClassifier("MobileNet", video, modelReady);
 
-  select("#start").mousePressed(function() {
-    playNextWord();
-  });
+  select("#start").mousePressed(playNextWord);
 
-  select("#next").mousePressed(function() {
+  select("#next").mousePressed(() => {
     currentIndex += 1;
     if (currentIndex >= words.length) {
       currentIndex = 0;

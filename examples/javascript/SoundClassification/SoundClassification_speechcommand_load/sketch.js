@@ -21,7 +21,7 @@ const modelJson =
   "https://storage.googleapis.com/tm-speech-commands/eye-test-sound-yining/model.json";
 
 async function setup() {
-  classifier = await ml5.soundClassifier(modelJson);
+  classifier = await ml5.soundClassifier(modelJson, options);
   // Create 'label' and 'confidence' div to hold results
 
   label = document.createElement("DIV");

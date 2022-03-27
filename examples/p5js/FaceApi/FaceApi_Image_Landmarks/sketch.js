@@ -1,6 +1,5 @@
 let faceapi;
 let img;
-let detections;
 
 // by default all options are set to true
 const detectionOptions = {
@@ -32,7 +31,7 @@ function gotResults(err, result) {
     return;
   }
   // console.log(result)
-  detections = result;
+  const detections = result;
 
   // background(220);
   background(255);
@@ -45,12 +44,13 @@ function gotResults(err, result) {
 }
 
 function drawBox(detections) {
-  const alignedRect = detections.alignedRect;
-  const { _x, _y, _width, _height } = alignedRect._box;
+  // eslint-disable-next-line prefer-destructuring
+  const box = detections.alignedRect.box;
+
   noFill();
   stroke(161, 95, 251);
   strokeWeight(2);
-  rect(_x, _y, _width, _height);
+  rect(box.x, box.y, box.width, box.height);
 }
 
 function drawLandmarks(detections) {
@@ -62,42 +62,42 @@ function drawLandmarks(detections) {
   // mouth
   beginShape();
   detections.parts.mouth.forEach(item => {
-    vertex(item._x, item._y);
+    vertex(item.x, item.y);
   });
   endShape(CLOSE);
 
   // nose
   beginShape();
   detections.parts.nose.forEach(item => {
-    vertex(item._x, item._y);
+    vertex(item.x, item.y);
   });
   endShape(CLOSE);
 
   // left eye
   beginShape();
   detections.parts.leftEye.forEach(item => {
-    vertex(item._x, item._y);
+    vertex(item.x, item.y);
   });
   endShape(CLOSE);
 
   // right eye
   beginShape();
   detections.parts.rightEye.forEach(item => {
-    vertex(item._x, item._y);
+    vertex(item.x, item.y);
   });
   endShape(CLOSE);
 
   // right eyebrow
   beginShape();
   detections.parts.rightEyeBrow.forEach(item => {
-    vertex(item._x, item._y);
+    vertex(item.x, item.y);
   });
   endShape();
 
   // left eye
   beginShape();
   detections.parts.leftEyeBrow.forEach(item => {
-    vertex(item._x, item._y);
+    vertex(item.x, item.y);
   });
   endShape();
 

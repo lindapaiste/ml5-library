@@ -23,7 +23,8 @@ function predict(){
 
 function gotResults(err, result){
   if(err){
-    return err;
+    console.error(err);
+    return;
   }
   console.log(result);
   translate(40, 0);
@@ -32,6 +33,4 @@ function gotResults(err, result){
     fill(180, 100, 100);
     rect(idx * 20, height/2 , 20,  rectHeight);
   })
-
-
 }

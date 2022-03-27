@@ -30,12 +30,11 @@ function setup() {
 
 function addData() {
   for (let i = 0; i < 500; i += 1) {
-    let xVal, labelVal;
+    const xVal = i;
+    let labelVal;
     if (i < 250) {
-      xVal = i;
       labelVal = "a";
     } else {
-      xVal = i;
       labelVal = "b";
     }
     const yVal = floor(random(500));
@@ -47,7 +46,7 @@ function addData() {
 function finishedTraining() {
   console.log("done");
 
-  nn.classify({ x: 0, y: 0.5 }, function(err, result) {
+  nn.classify({ x: 0, y: 0.5 }, (err, result) => {
     if (err) {
       console.log(err);
       return;

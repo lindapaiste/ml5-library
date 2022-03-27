@@ -12,6 +12,12 @@ export const p5Color2RGB = (p5ColorObj: p5.Color): RGB => {
     if (!match) throw new Error(`invalid rgb value ${p5ColorObj.toString('rgb')}`)
     const [r, g, b] = match[1].split(',').map(parseFloat);
     return [r, g, b];
+    // There is already an array in the property Color.levels, but this is not intended to be "public"
+    // @ts-ignore
+    // return color.levels.slice(0,3);
+    // If not wanting to access the private property, can do:
+    // return [red(color), green(color), blue(color)]
+
 }
 
 /**

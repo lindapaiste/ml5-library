@@ -54,11 +54,9 @@ async function setup() {
   // Read more at http://ability.nyu.edu/p5.js-speech/
   myVoice = new MySpeech();
 
-  document.querySelector("#start").addEventListener("click", function() {
-    playNextWord();
-  });
+  document.querySelector("#start").addEventListener("click", playNextWord);
 
-  document.querySelector("#next").addEventListener("click", function() {
+  document.querySelector("#next").addEventListener("click", () => {
     currentIndex += 1;
     if (currentIndex >= words.length) {
       currentIndex = 0;
@@ -130,9 +128,8 @@ async function getVideo() {
   document.body.appendChild(videoElement);
 
   // Create a webcam capture
-  const capture = await navigator.mediaDevices.getUserMedia({ video: true });
-  videoElement.srcObject = capture;
-  videoElement.play();
+  videoElement.srcObject = await navigator.mediaDevices.getUserMedia({video: true});
+  await videoElement.play();
 
   return videoElement;
 }

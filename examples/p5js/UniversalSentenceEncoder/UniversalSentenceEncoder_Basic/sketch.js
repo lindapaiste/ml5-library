@@ -25,10 +25,10 @@ function predict(){
 
 function gotResults(err, result){
   if(err){
-    return err;
+    console.error(err);
+    return;
   }
   console.log(result);
-
   result.forEach( (item, y) => {
     // console.log(item);
     item.forEach( (val, x) => {

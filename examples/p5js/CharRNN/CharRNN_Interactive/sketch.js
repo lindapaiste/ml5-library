@@ -101,6 +101,6 @@ function gotData(err, result) {
     return;
   }
   select('#status').html('Ready!');
-  select('#original').html(original);
+  select('#original').html(textInput.value());
   select('#prediction').html(result.sample);
 }

@@ -11,7 +11,6 @@ function setup() {
   cols = width / resolution;
   rows = height / resolution;
 
-  let index = 0;
   for (let i = 0; i < cols; i += 1) {
     for (let j = 0; j < rows; j += 1) {
       const br = 255; // y_values[index] * 255
@@ -22,7 +21,6 @@ function setup() {
       textAlign(CENTER, CENTER);
       text(nf(0.5, 1, 2), i * resolution + resolution / 2, j * resolution + resolution / 2);
       // text(nf(y_values[index], 1, 2), i * resolution + resolution / 2, j * resolution + resolution / 2)
-      index += 1;
     }
   }
 
@@ -68,7 +66,7 @@ function finishedTraining() {
 function gotResults(error, results) {
   background(0);
   if (error) {
-    console.log(err);
+    console.log(error);
     return;
   }
   // console.log(results);

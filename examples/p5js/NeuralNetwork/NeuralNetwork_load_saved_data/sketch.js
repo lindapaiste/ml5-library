@@ -28,9 +28,7 @@ function setup() {
   // Train the model
   const trainBtn = select('#trainBtn');
   // trainBtn.position(10, 50);
-  trainBtn.mousePressed(function () {
-    trainModel();
-  });
+  trainBtn.mousePressed(trainModel);
 
   // Save and download the model
   // let saveBtn = createButton('Save Model');
@@ -50,11 +48,13 @@ function setup() {
 
   // Load Data
   const loadBtn = select('#load');
-  loadBtn.changed(function () {
-    nn.loadData(loadBtn.elt.files, function () {
+
+  function onLoadBtnChanged() {
+    nn.loadData(loadBtn.elt.files, () => {
       console.log('Data Loaded!');
     });
-  });
+  }
+  loadBtn.changed(onLoadBtnChanged);
 }
 
 function draw(){

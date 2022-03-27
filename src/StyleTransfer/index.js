@@ -3,8 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-/* eslint max-len: "off" */
-/* eslint no-trailing-spaces: "off" */
 /*
 Fast Style Transfer
 This implementation is heavily based on github.com/reiinakano/fast-style-transfer-deeplearnjs by Reiichiro Nakano.
@@ -23,9 +21,9 @@ const IMAGE_SIZE = 200;
 class StyleTransfer extends Video {
   /**
    * Create a new Style Transfer Instance。
-   * @param {model} model - The path to Style Transfer model.
+   * @param {string} model - The path to Style Transfer model.
    * @param {HTMLVideoElement || p5.Video} video  - Optional. A HTML video element or a p5 video element.
-   * @param {funciton} callback - Optional. A function to be called once the model is loaded. If no callback is provided, it will return a promise that will be resolved once the model has loaded.
+   * @param {function} callback - Optional. A function to be called once the model is loaded. If no callback is provided, it will return a promise that will be resolved once the model has loaded.
    */
   constructor(model, video, callback) {
     super(video, IMAGE_SIZE);

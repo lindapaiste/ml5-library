@@ -1,6 +1,5 @@
 let cartoonGan;
 let img;
-let newImage;
 function preload(){
   img = loadImage('MrBubz.jpg');
 }

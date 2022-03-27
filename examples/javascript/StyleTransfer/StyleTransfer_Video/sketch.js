@@ -13,7 +13,8 @@ let style;
 let video;
 let isTransferring = false;
 let resultImg;
-let canvas, ctx;
+let canvas;
+let ctx;
 let toggleButton;
 const width = 320;
 const height = 240;
@@ -86,11 +87,10 @@ async function getVideo() {
   document.body.appendChild(videoElement);
 
   // Create a webcam capture
-  const capture = await navigator.mediaDevices.getUserMedia({
+  videoElement.srcObject = await navigator.mediaDevices.getUserMedia({
     video: true
-  })
-  videoElement.srcObject = capture;
-  videoElement.play();
+  });
+  await videoElement.play();
 
   return videoElement
 }
@@ -98,9 +98,9 @@ async function getVideo() {
 
 // Helper Functions
 function createCanvas(w, h) {
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
+  const canvasElement = document.createElement("canvas");
+  canvasElement.width = w;
+  canvasElement.height = h;
   document.body.appendChild(canvasElement);
-  return canvas;
+  return canvasElement;
 }

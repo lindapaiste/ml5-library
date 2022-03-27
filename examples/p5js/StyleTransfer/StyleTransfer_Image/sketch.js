@@ -44,11 +44,11 @@ function modelLoaded() {
 function transferImages() {
   statusMsg.html('Applying Style Transfer...!');
   
-  style1.transfer(inputImg, function(err, result) {
+  style1.transfer(inputImg, (err, result) => {
     createImg(result.src).parent('styleA');
   });
 
-  style2.transfer(inputImg, function(err, result) {
+  style2.transfer(inputImg, (err, result) => {
     createImg(result.src).parent('styleB');
   });
 

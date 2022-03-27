@@ -32,15 +32,11 @@ function draw() {
 
 // A function to draw ellipses over the detected keypoints
 function drawKeypoints() {
-  for (let i = 0; i < predictions.length; i += 1) {
-    const keypoints = predictions[i].scaledMesh;
-
-    // Draw facial keypoints.
-    for (let j = 0; j < keypoints.length; j += 1) {
-      const [x, y] = keypoints[j];
-
+  predictions.forEach( prediction => {
+    prediction.scaledMesh.keypoints.forEach( keypoint => {
+      const [x, y] = keypoint;
       fill(0, 255, 0);
       ellipse(x, y, 5, 5);
-    }
-  }
+    });
+  });
 }

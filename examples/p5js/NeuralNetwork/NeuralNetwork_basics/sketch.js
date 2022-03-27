@@ -24,37 +24,37 @@ function setup() {
   // Train the model
   const trainBtn = createButton("Train Model");
   trainBtn.position(10, 50);
-  trainBtn.mousePressed(function() {
+  trainBtn.mousePressed(() => {
     trainModel();
   });
 
   // Predict
   const predictBtn = createButton("Predict");
   predictBtn.position(10, 70);
-  predictBtn.mousePressed(function() {
+  predictBtn.mousePressed(() => {
     predict();
   });
 
   // Save and download the model
   const saveBtn = createButton("Save Model");
   saveBtn.position(10, 90);
-  saveBtn.mousePressed(function() {
+  saveBtn.mousePressed(() => {
     nn.save();
   });
 
   // Load the model from local files
   const loadLocalBtn = createButton("Load the model from local files");
   loadLocalBtn.position(10, 110);
-  loadLocalBtn.mousePressed(function() {
-    nn.load("model/model.json", function() {
+  loadLocalBtn.mousePressed(() => {
+    nn.load("model/model.json", () => {
       console.log("Model Loaded!");
     });
   });
 
   // Load model
   const loadBtn = select("#load");
-  loadBtn.changed(function() {
-    nn.load(loadBtn.elt.files, function() {
+  loadBtn.changed(() => {
+    nn.load(loadBtn.elt.files, () => {
       console.log("Model Loaded!");
     });
   });
@@ -64,7 +64,9 @@ function trainModel() {
   // Add training data
   // const trainingInput = [-0.6, 1, 0.25];
   // const trainingTarget = [0.3, 0.9];
-  let a, b, c;
+  let a;
+  let b;
+  let c;
   let trainingTarget;
   for (let i = 0; i < 500; i += 1) {
     if (i % 2) {

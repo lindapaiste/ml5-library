@@ -24,7 +24,8 @@ let strokePath;
 let seedStrokes = [];
 let button;
 // Storing a reference to the canvas
-let canvas, ctx;
+let canvas;
+let ctx;
 
 const width = 640;
 const height = 480;
@@ -139,11 +140,11 @@ function gotStroke(err, s) {
 }
 
 function createCanvas(w, h) {
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  document.body.appendChild(canvas);
-  return canvas;
+  const el = document.createElement("canvas");
+  el.width = w;
+  el.height = h;
+  document.body.appendChild(el);
+  return el;
 }
 
 function clearCanvas() {
@@ -151,24 +152,16 @@ function clearCanvas() {
   ctx.fillRect(0, 0, width, height);
 }
 
-function onMouseDown(e) {
+function onMouseDown() {
   mouseDown = true;
 }
 
-function onMouseUp(e) {
+function onMouseUp() {
   mouseDown = false;
 }
 
 function onMouseUpdate(e) {
-  const pos = getMousePos(document.querySelector("canvas"), e);
-  mouseX = pos.x;
-  mouseY = pos.y;
-}
-
-function getMousePos(canvas, e) {
   const rect = canvas.getBoundingClientRect();
-  return {
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top,
-  };
+  mouseX = e.clientX - rect.left;
+  mouseY = e.clientY - rect.top;
 }

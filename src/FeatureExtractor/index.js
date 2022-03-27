@@ -11,7 +11,7 @@ import handleArguments from "../utils/handleArguments";
 import Mobilenet from './Mobilenet';
 
 /**
- * @typedef {Object} options
+ * @typedef {Object} FeatureExtractorOptions
  * @property {number} version - default 1
  * @property {number} alpha - default 1.0
  * @property {number} topk - default 3
@@ -25,9 +25,9 @@ import Mobilenet from './Mobilenet';
 
 /**
  * Create a featureExtractor.
- * @param {model} model - The model from which extract the learned features. Case-insensitive
- * @param {options || function} optionsOrCallback - Optional.
- * @param {function} cb - Optional. 
+ * @param {string} model - The model from which extract the learned features. Case-insensitive
+ * @param {(FeatureExtractorOptions | function)} [optionsOrCallback] - Optional.
+ * @param {function} [cb] - Optional.
  */
 const featureExtractor = (model, optionsOrCallback, cb) => {
   const { string: modelName, options, callback } = handleArguments(model, optionsOrCallback, cb);

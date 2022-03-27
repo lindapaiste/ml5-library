@@ -20,10 +20,11 @@ function setup() {
   const canvas = createCanvas(600, 600);
 
   // Move the target if you click on the canvas
-  canvas.mousePressed(function() {
+  function onMousePressed() {
     target.x = mouseX;
     target.y = mouseY;
-  });
+  }
+  canvas.mousePressed(onMousePressed);
 
   // Improve performance for many small neural networks
   ml5.tf.setBackend("cpu");

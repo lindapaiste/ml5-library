@@ -9,11 +9,12 @@ Real time Object Detection using YOLO
 === */
 
 let yolo;
-let status;
 let objects = [];
-let canvas, ctx;
+let canvas;
+let ctx;
 const width = 640;
 const height = 420;
+let img;
 
 async function make() {
   img = new Image();
@@ -28,9 +29,7 @@ async function make() {
 }
 
 // when the dom is loaded, call make();
-window.addEventListener('DOMContentLoaded', function() {
-  make();
-});
+window.addEventListener('DOMContentLoaded', make);
 
 function startDetecting(){
   console.log('model ready')
@@ -38,7 +37,7 @@ function startDetecting(){
 }
 
 function detect() {
-  yolo.detect(img, function(err, results) {
+  yolo.detect(img, (err, results) => {
     if(err){
       console.log(err);
       return
@@ -73,9 +72,9 @@ function draw(){
 
 
 function createCanvas(w, h){
-  const canvas = document.createElement("canvas"); 
-  canvas.width  = w;
-  canvas.height = h;
-  document.body.appendChild(canvas);
-  return canvas;
+  const canvasElement = document.createElement("canvas");
+  canvasElement.width  = w;
+  canvasElement.height = h;
+  document.body.appendChild(canvasElement);
+  return canvasElement;
 }

@@ -48,22 +48,22 @@ function videoReady() {
 
 // When the Cat button is pressed, add the current frame
 // from the video with a label of cat to the classifier
-catButton.onclick = function() {
+catButton.onclick = () => {
   classifier.addImage("cat");
   amountOfCatImages.innerText = Number(amountOfCatImages.innerText) + 1;
 };
 
 // When the Cat button is pressed, add the current frame
 // from the video with a label of cat to the classifier
-dogButton.onclick = function() {
+dogButton.onclick = () => {
   classifier.addImage("dog");
   amountOfDogImages.innerText = Number(amountOfDogImages.innerText) + 1;
 };
 
 // When the train button is pressed, train the classifier
 // With all the given cat and dog images
-train.onclick = function() {
-  classifier.train(function(lossValue) {
+train.onclick = () => {
+  classifier.train(lossValue => {
     if (lossValue) {
       totalLoss = lossValue;
       loss.innerHTML = `Loss: ${totalLoss}`;
@@ -87,6 +87,6 @@ function gotResults(err, results) {
 }
 
 // Start predicting when the predict button is clicked
-predict.onclick = function() {
+predict.onclick = () => {
   classifier.classify(gotResults);
 };

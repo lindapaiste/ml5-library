@@ -12,10 +12,8 @@ This version is heavily based on Christopher Hesse TensorFlow.js implementation:
 
 import * as tf from '@tensorflow/tfjs';
 import CheckpointLoaderPix2pix from '../utils/checkpointLoaderPix2pix';
-import {
-  array3DToImage
-} from '../utils/imageUtilities';
 import callCallback from '../utils/callcallback';
+import {toImage} from "../utils/imageConversion";
 
 class Pix2pix {
   /**
@@ -49,7 +47,7 @@ class Pix2pix {
 
   async transferInternal(inputElement) {
     
-    const result = array3DToImage(tf.tidy(() => {
+    const result = toImage(tf.tidy(() => {
       const input = tf.browser.fromPixels(inputElement);
       const inputData = input.dataSync();
       const floatInput = tf.tensor3d(inputData, input.shape);

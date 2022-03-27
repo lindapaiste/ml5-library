@@ -4,9 +4,9 @@ This project is still a work in progress, but we encourage everyone to join, pro
 
 # Structure and Syntax
 
-We are trying to keep things as simple as possible. ml5.js aims to make machine learning approachable for a broad audience of artists, creative coders, and students. The library provides access to machine learning algorithms and models in the browser and we try to keeps things simple for everyone.
+We are trying to keep things as simple as possible. ml5.js aims to make machine learning approachable for a broad audience of artists, creative coders, and students. The library provides access to machine learning algorithms and models in the browser and we try to keep things simple for everyone.
 
-Each example in this repository is self-contained. Meaning that it can be used with out external dependencies or files. Just the folder where the example live is necessary.
+Each example in this repository is self-contained. Meaning that it can be used without external dependencies or files. Just the folder where the example live is necessary.
 
 The folders are structure based on examples built with other JavaScript frameworks/libraries. This means we aim to have the following structure:
 

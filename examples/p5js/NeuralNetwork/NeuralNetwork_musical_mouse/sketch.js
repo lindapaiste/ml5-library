@@ -2,7 +2,6 @@
 let brain;
 
 // Variables to track p5 oscillator
-const playing = false;
 let frequency;
 let osc;
 
@@ -11,7 +10,7 @@ function setup() {
   // Only when clicking on the canvas
   canvas.mousePressed(addData);
 
-  // Create ethe model
+  // Create the model
   const options = {
     inputs: ['x', 'y'],  // TODO: support ['x', 'y']
     outputs: ['freq'], // TODO: support ['freq]

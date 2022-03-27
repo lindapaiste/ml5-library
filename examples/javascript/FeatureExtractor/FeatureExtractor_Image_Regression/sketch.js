@@ -20,8 +20,7 @@ const height = 480;
 let positionX = width / 2;
 
 function map(n, start1, stop1, start2, stop2) {
-  const newval = ((n - start1) / (stop1 - start1)) * (stop2 - start2) + start2;
-  return newval;
+  return ((n - start1) / (stop1 - start1)) * (stop2 - start2) + start2;
 }
 
 async function setup() {
@@ -70,14 +69,15 @@ function setupButtons() {
   slider = document.querySelector("#slider");
   // When the Dog button is pressed, add the current frame
   // from the video with a label of "dog" to the classifier
-  document.querySelector("#addSample").addEventListener("click", function() {
+  document.querySelector("#addSample").addEventListener("click", () => {
     regressor.addImage(parseFloat(slider.value));
-    document.querySelector("#amountOfSamples").textContent = samples += 1;
+    samples += 1;
+    document.querySelector("#amountOfSamples").textContent = samples;
   });
 
   // Train Button
-  document.querySelector("#train").addEventListener("click", function() {
-    regressor.train(function(lossValue) {
+  document.querySelector("#train").addEventListener("click", () => {
+    regressor.train(lossValue => {
       if (lossValue) {
         loss = lossValue;
         document.querySelector("#loss").textContent = `Loss: ${loss}`;
@@ -113,9 +113,8 @@ async function getVideo() {
   document.body.appendChild(videoElement);
 
   // Create a webcam capture
-  const capture = await navigator.mediaDevices.getUserMedia({ video: true });
-  videoElement.srcObject = capture;
-  videoElement.play();
+  videoElement.srcObject = await navigator.mediaDevices.getUserMedia({video: true});
+  await videoElement.play();
 
   return videoElement;
 }

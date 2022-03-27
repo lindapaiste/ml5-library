@@ -21,7 +21,7 @@ function setup() {
   poseNet = ml5.poseNet(video, modelReady);
   // This sets up an event that fills the global variable "poses"
   // with an array every time new poses are detected
-  poseNet.on('pose', function (results) {
+  poseNet.on('pose', results => {
     poses = results;
   });
   // Hide the video element, and just show the canvas
@@ -82,13 +82,9 @@ function gotResults(error, results) {
 }
 
 function getInputs() {
-  const keypoints = poses[0].pose.keypoints;
-  const inputs = [];
-  for (let i = 0; i < keypoints.length; i += 1) {
-    inputs.push(keypoints[i].position.x);
-    inputs.push(keypoints[i].position.y);
-  }
-  return inputs;
+  return poses[0].pose.keypoints.flatMap( keypoint =>
+      [keypoint.position.x, keypoint.position.y]
+  );
 }
 
 //  Add a training example
@@ -111,11 +107,10 @@ function draw() {
   strokeWeight(2);
   // For one pose only (use a for loop for multiple poses!)
   if (poses.length > 0) {
-    const pose = poses[0].pose;
-    for (let i = 0; i < pose.keypoints.length; i += 1) {
+    poses[0].pose.keypoints.forEach( keypoint => {
       fill(213, 0, 143);
       noStroke();
-      ellipse(pose.keypoints[i].position.x, pose.keypoints[i].position.y, 8);
-    }
+      ellipse(keypoint.position.x, keypoint.position.y, 8);
+    });
   }
 }

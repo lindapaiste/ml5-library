@@ -50,21 +50,22 @@ class Bird {
     // Find the closest pipe
     let closest = null;
     let closestD = Infinity;
-    for (let i = 0; i < pipes.length; i += 1) {
-      const d = pipes[i].x + pipes[i].w - this.x;
+    pipes.forEach(pipe => {
+      const d = pipe.x + pipe.w - this.x;
       if (d < closestD && d > 0) {
-        closest = pipes[i];
+        closest = pipe;
         closestD = d;
       }
-    }
+    });
 
     // Normalize 5 inputs
-    const inputs = [];
-    inputs[0] = this.y / height;
-    inputs[1] = closest.top / height;
-    inputs[2] = closest.bottom / height;
-    inputs[3] = closest.x / width;
-    inputs[4] = this.velocity / 10;
+    const inputs = [
+      this.y / height,
+      closest.top / height,
+      closest.bottom / height,
+      closest.x / width,
+      this.velocity / 10
+    ];
 
     // Jump according to neural network output
     const results = this.brain.classifySync(inputs);

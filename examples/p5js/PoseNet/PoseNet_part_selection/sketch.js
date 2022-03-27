@@ -21,7 +21,7 @@ function setup() {
   poseNet = ml5.poseNet(video, {outputStride:8, quantBytes:4}, modelReady);
   // This sets up an event that fills the global variable "poses"
   // with an array every time new poses are detected
-  poseNet.on('pose', function(results) {
+  poseNet.on('pose', results => {
     poses = results;
   });
   // Hide the video element, and just show the canvas
@@ -32,6 +32,8 @@ function modelReady() {
   select('#status').html('Model Loaded');
 }
 
+// p5 global function mousePressed
+// eslint-disable-next-line no-unused-vars
 function mousePressed(){
   console.log(JSON.stringify(poses))
 }
@@ -42,21 +44,18 @@ function draw() {
 
   // For one pose only (use a for loop for multiple poses!)
   if (poses.length > 0) {
-    const pose = poses[0].pose;
+    const {nose, rightEye, leftEye} = poses[0].pose;
 
     // Create a pink ellipse for the nose
     fill(213, 0, 143);
-    const nose = pose.nose;
     ellipse(nose.x, nose.y, 20, 20);
 
     // Create a yellow ellipse for the right eye
     fill(255, 215, 0);
-    const rightEye = pose.rightEye;
     ellipse(rightEye.x, rightEye.y, 20, 20);
 
     // Create a yellow ellipse for the right eye
     fill(255, 215, 0);
-    const leftEye = pose.leftEye;
     ellipse(leftEye.x, leftEye.y, 20, 20);
   }
 }

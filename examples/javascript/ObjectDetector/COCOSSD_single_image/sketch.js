@@ -9,9 +9,9 @@ Real time Object Detection using objectDetector
 === */
 
 let objectDetector;
-let status;
 let objects = [];
-let canvas, ctx;
+let img;
+let ctx;
 const width = 640;
 const height = 420;
 
@@ -23,14 +23,12 @@ async function make() {
 
   objectDetector = await ml5.objectDetector('cocossd', startDetecting)
 
-  canvas = createCanvas(width, height);
+  const canvas = createCanvas(width, height);
   ctx = canvas.getContext('2d');
 }
 
 // when the dom is loaded, call make();
-window.addEventListener('DOMContentLoaded', function () {
-  make();
-});
+window.addEventListener('DOMContentLoaded', make);
 
 function startDetecting() {
   console.log('model ready')
@@ -38,7 +36,7 @@ function startDetecting() {
 }
 
 function detect() {
-  objectDetector.detect(img, function (err, results) {
+  objectDetector.detect(img, (err, results) => {
     if (err) {
       console.log(err);
       return

@@ -16,7 +16,8 @@ const knnClassifier = ml5.KNNClassifier();
 let featureExtractor;
 const width = 640;
 const height = 480;
-let canvas, ctx;
+let canvas;
+let ctx;
 
 async function setup() {
   // Create a featureExtractor that can extract the already learned features from MobileNet
@@ -85,36 +86,28 @@ function classify() {
 // A util function to create UI buttons
 function createButtons() {
   // When the addClass1 button is pressed, add the current frame to class "Up"
-  buttonA = document.querySelector('#addClass1');
-  buttonA.addEventListener('click', function() {
-    addExample('Up');
-  });
+  document.querySelector('#addClass1')
+      .addEventListener('click', () => addExample('Up'));
 
   // When the addClass2 button is pressed, add the current frame to class "Right"
-  buttonB = document.querySelector('#addClass2');
-  buttonB.addEventListener('click', function() {
-    addExample('Right');
-  });
+  document.querySelector('#addClass2')
+      .addEventListener('click', () => addExample('Right'));
 
   // When the addClass3 button is pressed, add the current frame to class "Down"
-  buttonC = document.querySelector('#addClass3');
-  buttonC.addEventListener('click', function() {
-    addExample('Down');
-  });
+  document.querySelector('#addClass3')
+      .addEventListener('click', () => addExample('Down'));
 
   // When the addClass4 button is pressed, add the current frame to class "Left"
-  buttonC = document.querySelector('#addClass4');
-  buttonC.addEventListener('click', function() {
-    addExample('Left');
-  });
+  document.querySelector('#addClass4')
+      .addEventListener('click', () => addExample('Left'));
 
   // Predict button
-  buttonPredict = document.querySelector('#buttonPredict');
-  buttonPredict.addEventListener('click', classify);
+  document.querySelector('#buttonPredict')
+      .addEventListener('click', classify);
 
   // Clear all classes button
-  buttonClearAll = document.querySelector('#clearAll');
-  buttonClearAll.addEventListener('click', clearAllLabels);
+  document.querySelector('#clearAll')
+      .addEventListener('click', clearAllLabels);
 }
 
 // Show the results
@@ -172,12 +165,6 @@ function updateCounts() {
   document.querySelector('#example4').textContent = counts.Left || 0;
 }
 
-// Clear the examples in one class
-function clearLabel(classLabel) {
-  knnClassifier.clearLabel(classLabel);
-  updateCounts();
-}
-
 // Clear all the examples in all classes
 function clearAllLabels() {
   knnClassifier.clearAllLabels();
@@ -195,9 +182,8 @@ async function getVideo(){
   document.body.appendChild(videoElement);
 
   // Create a webcam capture
-  const capture = await navigator.mediaDevices.getUserMedia({ video: true })
-  videoElement.srcObject = capture;
-  videoElement.play();
+  videoElement.srcObject = await navigator.mediaDevices.getUserMedia({ video: true });
+  await videoElement.play();
 
   return videoElement
 }

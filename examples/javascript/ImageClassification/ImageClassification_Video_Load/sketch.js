@@ -11,7 +11,6 @@ This example uses p5 preload function to create the classifier
 
 const checkpoint =
   "https://storage.googleapis.com/tm-pro-a6966.appspot.com/eyeo-test-yining/model.json";
-let classifier;
 
 // Grab elements, create settings, etc.
 const video = document.getElementById("video");

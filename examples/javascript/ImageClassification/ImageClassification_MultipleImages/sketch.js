@@ -10,19 +10,16 @@ Multiple Image classification using MobileNet
 
 // Initialize the Image Classifier method using MobileNet
 let classifier;
-
-let img;
-const currentIndex = 0;
 let allImages = [];
 const predictions = [];
-let results;
+let ctx;
 
 async function setup() {
   classifier = await ml5.imageClassifier("MobileNet");
-  data = await fetch("assets/data.json");
-  data = await data.json();
+  const res = await fetch("assets/data.json");
+  const data = await res.json();
 
-  canvas = document.querySelector("#myCanvas");
+  const canvas = document.querySelector("#myCanvas");
   ctx = canvas.getContext("2d");
 
   ctx.beginPath();
@@ -30,27 +27,17 @@ async function setup() {
   ctx.rect(0, 0, canvas.width, canvas.height);
   ctx.fill();
 
-  // append images to array
-  allImages = appendImages(data.images);
+  allImages = data.images;
 
   await Promise.all(allImages.map(async (imgPath, idx) => loadImage(imgPath, idx)));
 }
 setup();
 
-function appendImages(arr) {
-  const output = [];
-  for (i = 0; i < arr.length; i += 1) {
-    imgPath = arr[i];
-    output.push(`images/dataset/${imgPath}`);
-  }
-  return output;
-}
-
 async function loadImage(imgPath, idx) {
   const imgEl = new Image();
-  imgEl.src = imgPath;
+  imgEl.src = `images/dataset/${imgPath}`;
 
-  imgEl.onload = async function() {
+  imgEl.onload = async () => {
     ctx.drawImage(imgEl, 0, 0, imgEl.width, imgEl.height);
 
     await classifier.classify(imgEl, (err, res) => {
@@ -86,7 +73,7 @@ function download(content, fileName, contentType) {
 }
 
 function savePredictions() {
-  predictionsJSON = {
+  const predictionsJSON = {
     predictions,
   };
   download(JSON.stringify(predictionsJSON), "json.txt", "text/plain");

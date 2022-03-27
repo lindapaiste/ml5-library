@@ -7,7 +7,6 @@ let ready = false;
 const videoSize = 10;
 
 // For sound synthesis
-const playing = false;
 let frequency;
 let osc;
 
@@ -33,7 +32,7 @@ function setup() {
   // Create the model
   pixelBrain = ml5.neuralNetwork(options);
 
-  // Buttons add trainin data and train model
+  // Buttons add training data and train model
   select("#addExample").mousePressed(addExample);
   select("#train").mousePressed(trainModel);
 }

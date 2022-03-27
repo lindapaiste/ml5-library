@@ -77,35 +77,35 @@ function classify() {
 // A util function to create UI buttons
 function createButtons() {
   // When the addClass1 button is pressed, add the current frame to class "Up"
-  buttonA = select("#addClass1");
-  buttonA.mousePressed(function() {
+  const buttonA = select("#addClass1");
+  buttonA.mousePressed(() => {
     addExample("Up");
   });
 
   // When the addClass2 button is pressed, add the current frame to class "Right"
-  buttonB = select("#addClass2");
-  buttonB.mousePressed(function() {
+  const buttonB = select("#addClass2");
+  buttonB.mousePressed(() => {
     addExample("Right");
   });
 
   // When the addClass3 button is pressed, add the current frame to class "Down"
-  buttonC = select("#addClass3");
-  buttonC.mousePressed(function() {
+  const buttonC = select("#addClass3");
+  buttonC.mousePressed(() => {
     addExample("Down");
   });
 
   // When the addClass4 button is pressed, add the current frame to class "Left"
-  buttonC = select("#addClass4");
-  buttonC.mousePressed(function() {
+  const buttonD = select("#addClass4");
+  buttonD.mousePressed(() => {
     addExample("Left");
   });
 
   // Predict button
-  buttonPredict = select("#buttonPredict");
+  const buttonPredict = select("#buttonPredict");
   buttonPredict.mousePressed(classify);
 
   // Clear all classes button
-  buttonClearAll = select("#clearAll");
+  const buttonClearAll = select("#clearAll");
   buttonClearAll.mousePressed(clearAllLabels);
 }
 
@@ -162,12 +162,6 @@ function updateCounts() {
   select("#example2").html(counts.Right || 0);
   select("#example3").html(counts.Down || 0);
   select("#example4").html(counts.Left || 0);
-}
-
-// Clear the examples in one class
-function clearLabel(classLabel) {
-  knnClassifier.clearLabel(classLabel);
-  updateCounts();
 }
 
 // Clear all the examples in all classes

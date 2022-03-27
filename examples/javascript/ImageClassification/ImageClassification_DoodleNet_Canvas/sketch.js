@@ -12,10 +12,9 @@ This example uses a callback pattern to create the classifier
 // Initialize the Image Classifier method with DoodleNet.
 let classifier;
 
-let request;
-
 // A variable to hold the canvas image we want to classify
-let canvas, ctx;
+let canvas;
+let ctx;
 
 // Two variable to hold the label and confidence of the result
 let label;
@@ -64,7 +63,7 @@ function clearCanvas() {
 }
 
 function draw() {
-  request = requestAnimationFrame(draw);
+  requestAnimationFrame(draw);
 
   if (pX == null || pY == null) {
     ctx.beginPath();
@@ -92,27 +91,19 @@ function draw() {
   pY = y;
 }
 
-function onMouseDown(e) {
+function onMouseDown() {
   mouseDown = true;
 }
 
-function onMouseUp(e) {
+function onMouseUp() {
   mouseDown = false;
   classifyCanvas();
 }
 
 function onMouseUpdate(e) {
-  const pos = getMousePos(canvas, e);
-  x = pos.x;
-  y = pos.y;
-}
-
-function getMousePos(canvas, e) {
   const rect = canvas.getBoundingClientRect();
-  return {
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top,
-  };
+    x = e.clientX - rect.left;
+    y = e.clientY - rect.top;
 }
 
 function classifyCanvas() {

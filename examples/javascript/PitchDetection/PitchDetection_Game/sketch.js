@@ -9,11 +9,7 @@ A game using pitch Detection with CREPE
 === */
 
 // Pitch variables
-let crepe;
-const voiceLow = 100;
-const voiceHigh = 500;
-let audioStream;
-let stream;
+let pitch;
 
 const width = 410;
 const height = 320;
@@ -25,30 +21,25 @@ const scale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 // Text variables
 let goalNote = 0;
 let currentNote = '';
-const currentText = '';
-let textCoordinates;
-let canvas;
+let ctx;
 
 let request;
 // taken from p5.Sound
 function freqToMidi(f) {
   const mathlog2 = Math.log(f / 440) / Math.log(2);
-  const m = Math.round(12 * mathlog2) + 69;
-  return m;
-};
+  return Math.round(12 * mathlog2) + 69;
+}
 
 function map(n, start1, stop1, start2, stop2) {
-  const newval = (n - start1) / (stop1 - start1) * (stop2 - start2) + start2;
-  return newval;
-};
+  return (n - start1) / (stop1 - start1) * (stop2 - start2) + start2;
+}
 
 async function setup() {
-  canvas = createCanvas(width, height);
-  textCoordinates = [width / 2, 30];
+  createCanvas(width, height);
   gameReset();
 
-  audioContext = new AudioContext();
-  stream = await navigator.mediaDevices.getUserMedia({
+  const audioContext = new AudioContext();
+  const stream = await navigator.mediaDevices.getUserMedia({
     audio: true,
     video: false
   });
@@ -68,7 +59,7 @@ function modelLoaded() {
 }
 
 function getPitch() {
-  pitch.getPitch(function (err, frequency) {
+  pitch.getPitch((err, frequency) => {
     if (frequency) {
       const midiNum = freqToMidi(frequency);
       currentNote = scale[midiNum % 12];
@@ -82,27 +73,27 @@ function draw() {
   request = requestAnimationFrame(draw)
   clearCanvas();
 
-  goalHeight = map(goalNote, 0, scale.length - 1, 0, height);
+  const goalHeight = map(goalNote, 0, scale.length - 1, 0, height);
   // Goal Circle is Blue
-  canvas.beginPath();
-  canvas.arc(width / 2, goalHeight, circleSize, 0, 2 * Math.PI);
-  canvas.strokeStyle = '#003300';
-  canvas.stroke();
+  ctx.beginPath();
+  ctx.arc(width / 2, goalHeight, circleSize, 0, 2 * Math.PI);
+  ctx.strokeStyle = '#003300';
+  ctx.stroke();
 
-  canvas.fillText(scale[goalNote], (width / 2) - 5, goalHeight + (circleSize / 6));
+  ctx.fillText(scale[goalNote], (width / 2) - 5, goalHeight + (circleSize / 6));
 
   // Current Pitch Circle is Pink
   if (currentNote) {
     document.querySelector('#hit').textContent = '';
-    currentHeight = map(scale.indexOf(currentNote), 0, scale.length - 1, 0, height);
+    const currentHeight = map(scale.indexOf(currentNote), 0, scale.length - 1, 0, height);
 
-    canvas.beginPath();
-    canvas.arc(width / 2, currentHeight, circleSize, 0, 2 * Math.PI);
-    canvas.strokeStyle = 'rgb(255, 0, 255)';
-    canvas.stroke();
+    ctx.beginPath();
+    ctx.arc(width / 2, currentHeight, circleSize, 0, 2 * Math.PI);
+    ctx.strokeStyle = 'rgb(255, 0, 255)';
+    ctx.stroke();
 
 
-    canvas.fillText(scale[scale.indexOf(currentNote)], (width / 2) - 5, currentHeight + (circleSize / 6));
+    ctx.fillText(scale[scale.indexOf(currentNote)], (width / 2) - 5, currentHeight + (circleSize / 6));
     // If target is hit
     if (dist(width / 2, currentHeight, width / 2, goalHeight) < circleSize / 2) {
       hit(goalHeight, scale[goalNote]);
@@ -122,13 +113,13 @@ function gameReset() {
 
 function hit(goalHeight, note) {
   cancelAnimationFrame(request);
-  canvas.beginPath();
-  canvas.arc(width / 2, goalHeight, circleSize, 0, 2 * Math.PI);
-  canvas.strokeStyle = 'rgb(138, 43, 226)';
-  canvas.stroke();
+  ctx.beginPath();
+  ctx.arc(width / 2, goalHeight, circleSize, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgb(138, 43, 226)';
+  ctx.stroke();
 
 
-  canvas.fillText(note, width / 2, goalHeight + (circleSize / 6));
+  ctx.fillText(note, width / 2, goalHeight + (circleSize / 6));
 
   document.querySelector('#hit').textContent = 'Nice!';
 
@@ -139,8 +130,8 @@ function hit(goalHeight, note) {
 
 // Clear the canvas
 function clearCanvas() {
-  canvas.fillStyle = '#ebedef'
-  canvas.fillRect(0, 0, width, height);
+  ctx.fillStyle = '#ebedef'
+  ctx.fillRect(0, 0, width, height);
 }
 
 function createCanvas(w, h) {
@@ -148,8 +139,7 @@ function createCanvas(w, h) {
   canvasElement.width = w;
   canvasElement.height = h;
   document.body.appendChild(canvasElement);
-  const canvas = canvasElement.getContext("2d");
-  canvas.fillStyle = '#ebedef'
-  canvas.fillRect(0, 0, w, h);
-  return canvas;
+  ctx = canvasElement.getContext("2d");
+  ctx.fillStyle = '#ebedef'
+  ctx.fillRect(0, 0, w, h);
 }

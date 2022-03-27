@@ -11,6 +11,8 @@ This example uses promises to create the classifier
 
 // Grab elements, create settings, etc.
 const video = document.getElementById("video");
+const result = document.getElementById("result");
+const probability = document.getElementById("probability");
 
 // Create a webcam capture
 navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {

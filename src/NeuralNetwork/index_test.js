@@ -583,22 +583,22 @@ describe('NeuralNetwork', () => {
 //       });
 //     });
 
-//     // getMin()
-//     describe('.getMin()', () => {
+//     // arrayMin()
+//     describe('.arrayMin()', () => {
 //       it('should get the min value from an array', () => {
 //         // TODO:
 //       });
 //     });
 
-//     // getMax()
-//     describe('.getMax()', () => {
+//     // arrayMax()
+//     describe('.arrayMax()', () => {
 //       it('should get the max value from an array ', () => {
 //         // TODO:
 //       });
 //     });
 
-//     // isJsonOrString()
-//     describe('.isJsonOrString()', () => {
+//     // isValidJson()
+//     describe('.isValidJson()', () => {
 //       it('should tests if a string is a valid json or string', () => {
 //         // TODO:
 //       });

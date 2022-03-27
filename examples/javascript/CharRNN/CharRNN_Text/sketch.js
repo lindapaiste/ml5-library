@@ -83,16 +83,16 @@ function generate() {
         length: lengthSlider.value
       };
 
-      // Generate text with the charRNN
-      charRNN.generate(data, gotData);
-
       // When it's done
-      function gotData(err, result) {
+      const gotData = (err, result) => {
         // Update the status log
         status.innerHTML = 'Ready!';
         resultText.innerHTML = txt + result.sample;
         runningInference = false;
-      }
+      };
+
+      // Generate text with the charRNN
+      charRNN.generate(data, gotData);
     }
   }
 }

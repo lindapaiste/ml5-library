@@ -58,10 +58,10 @@ function draw() {
     }
 
     // Run all birds
-    for (const bird of birds) {
+    birds.forEach(bird => {
       bird.think(pipes);
       bird.update();
-    }
+    });
 
     // If all the birds have died go to the next generation
     if (birds.length === 0) {
@@ -74,11 +74,11 @@ function draw() {
   // All the drawing stuff
   background(0);
 
-  for (const bird of birds) {
+  birds.forEach(bird => {
     bird.show();
-  }
+  });
 
-  for (const pipe of pipes) {
+  pipes.forEach(pipe => {
     pipe.show();
-  }
+  });
 }

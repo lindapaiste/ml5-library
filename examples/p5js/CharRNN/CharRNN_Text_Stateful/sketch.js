@@ -11,11 +11,6 @@ For more models see: https://github.com/ml5js/ml5-data-and-training/tree/master/
 === */
 
 let charRNN;
-let textInput;
-let tempSlider;
-let startBtn;
-let resetBtn;
-let singleBtn;
 let generating = false;
 
 const canvasHeight = 100;
@@ -24,27 +19,24 @@ function setup() {
   noCanvas();
   // Create the LSTM Generator passing it the model directory
   charRNN = ml5.charRNN('https://raw.githubusercontent.com/ml5js/ml5-data-and-models/main/models/charRNN/woolf/', modelReady);
-  // Grab the DOM elements
-  textInput = select('#textInput');
-  tempSlider = select('#tempSlider');
-  startBtn = select('#start');
-  resetBtn = select('#reset');
-  singleBtn = select('#single');
 
   // DOM element events
-  startBtn.mousePressed(generate);
-  resetBtn.mousePressed(resetModel);
-  singleBtn.mousePressed(predict);
-  tempSlider.input(updateSliders);
+  select('#start').mousePressed(generate);
+  select('#reset').mousePressed(resetModel);
+  select('#single').mousePressed(predict);
+  select('#tempSlider').input(updateSliders);
 }
 
+// p5 global function windowResized
+// eslint-disable-next-line no-unused-vars
 function windowResized() {
   resizeCanvas(windowWidth, canvasHeight);
 }
 
 // Update the slider values
 function updateSliders() {
-  select('#temperature').html(tempSlider.value());
+  const value = select('#tempSlider').value();
+  select('#temperature').html(value);
 }
 
 async function modelReady() {
@@ -62,10 +54,10 @@ function resetModel() {
 function generate() {
   if (generating) {
     generating = false;
-    startBtn.html('Start');
+    select('#start').html('Start');
   } else {
     generating = true;
-    startBtn.html('Pause');
+    select('#start').html('Pause');
     loopRNN();
   }
 }
@@ -78,7 +70,7 @@ async function loopRNN() {
 
 async function predict() {
   const par = select('#result');
-  const temperature = tempSlider.value();
+  const temperature = select('#tempSlider').value();
   const next = await charRNN.predict(temperature);
   await charRNN.feed(next.sample);
   par.html(par.html() + next.sample);

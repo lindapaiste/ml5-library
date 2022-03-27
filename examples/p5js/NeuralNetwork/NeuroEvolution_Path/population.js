@@ -6,24 +6,25 @@
 
 class Population {
   constructor(total) {
-    this.population = [];
-    this.generations = 0; // Number of generations
-    for (let i = 0; i < total; i += 1) {
-      this.population[i] = new Particle();
-    }
+    // Number of generations
+    this.generations = 0;
+    // Empty array with length total
+    this.population = new Array(total);
+    // Fill array with particles
+    this.population = this.population.fill(new Particle())
   }
 
   update() {
-    for (const p of this.population) {
+    this.population.forEach(p => {
       p.think();
       p.update();
-    }
+    });
   }
 
   show() {
-    for (const p of this.population) {
+    this.population.forEach(p => {
       p.show();
-    }
+    });
   }
 
   reproduce() {
@@ -49,23 +50,17 @@ class Population {
 
   // Normalize all fitness values
   calculateFitness() {
-    let sum = 0;
-    for (const p of this.population) {
-      sum += p.calcFitness();
-    }
-    for (const p of this.population) {
-      p.fitness /= sum;
-    }
+    const sum = this.population.reduce((total, p) => total + p.calcFitness(), 0);
+    this.population = this.population.map(p => ({
+      ...p,
+      fitness: p.fitness / sum
+    }));
   }
 
   // Making the next generation
   reproduction() {
-    const nextPopulation = [];
     // Refill the population with children from the mating pool
-    for (let i = 0; i < this.population.length; i += 1) {
-      nextPopulation[i] = this.reproduce();
-    }
-    this.population = nextPopulation;
+    this.population = this.population.map( () => this.reproduce() );
     this.generations += 1;
   }
 }
