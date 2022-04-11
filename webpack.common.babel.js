@@ -16,6 +16,7 @@ export default {
   output: {
     path: resolve(__dirname, "dist"),
     publicPath: "/",
+    libraryExport: "default",
     libraryTarget: "umd",
     filename: "ml5.js",
     library: "ml5",
