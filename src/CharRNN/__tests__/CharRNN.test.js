@@ -1,7 +1,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-import charRNN from './index';
+import charRNN from '..';
 
 const RNN_MODEL_URL = 'https://raw.githubusercontent.com/ml5js/ml5-data-and-models/master/models/lstm/woolf';
 
@@ -44,14 +44,16 @@ describe('charRnn', () => {
       expect(rnn.defaults.temperature).toBe(RNN_DEFAULTS.temperature);
       expect(rnn.defaults.stateful).toBe(RNN_DEFAULTS.stateful);
     });
-    
-    it('Should generate content that follows default options if given an empty object', async() => {
+
+    it('Should generate content that follows default options if given an empty object', async () => {
       const result = await rnn.generate({});
       expect(result.sample.length).toBe(20);
     });
 
-    it('generates content that follows the set options', async() => {
+    it('generates content that follows the set options', async () => {
       const result = await rnn.generate(RNN_OPTIONS);
       expect(result.sample.length).toBe(RNN_OPTIONS.length);
     });
-	
+
+  });
+});

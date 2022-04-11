@@ -16,9 +16,9 @@
     "lint:nibble": "npx eslint-nibble --ext .js .",
     "manual-test": "webpack-dev-server --open --config webpack.test.babel.js",
     "build": "webpack --config webpack.prod.babel.js --config-name ml5",
-    "test": "./node_modules/karma/bin/karma start karma.conf.js",
-    "test-jest": "jest",
-    "test-watch": "jest --watch",
+    "test": "npm-run-all test:jest test:karma",
+    "test:jest": "jest",
+    "test:karma": "./node_modules/karma/bin/karma start karma.conf.js",
     "test:single": "./node_modules/karma/bin/karma start karma.conf.js --single-run",
     "test-travis": "./scripts/test-travis.sh",
     "serve:docs": "docsify serve docs",
@@ -48,16 +48,14 @@
   },
   "homepage": "https://github.com/ml5js/ml5-library#readme",
   "devDependencies": {
-    "@babel/cli": "^7.16.0",
+    "@babel/cli": "^7.16.5",
     "@babel/core": "^7.16.5",
-    "@babel/plugin-transform-async-to-generator": "^7.16.5",
+    "@babel/plugin-proposal-object-rest-spread": "^7.16.5",
     "@babel/plugin-transform-runtime": "^7.16.5",
     "@babel/polyfill": "^7.12.1",
     "@babel/preset-env": "^7.16.5",
-    "@babel/preset-react": "^7.16.5",
     "@babel/register": "^7.16.5",
     "@babel/runtime": "^7.16.5",
-    "@babel/runtime-corejs3": "^7.16.5",
     "@tensorflow/tfjs-node": "^1.2.9",
     "all-contributors-cli": "^6.10.0",
     "babel-jest": "^27.4.5",
@@ -99,7 +97,7 @@
     "webpack": "4.1.1",
     "webpack-cli": "2.0.10",
     "webpack-dev-server": "3.10.3",
-    "webpack-merge": "^5.8.0"
+    "webpack-merge": "^4.1.2"
   },
   "config": {
     "commitizen": {
@@ -113,12 +111,12 @@
   "babel": {
     "presets": [
       [
-        "env"
+        "@babel/preset-env"
       ]
     ],
     "plugins": [
-      "transform-runtime",
-      "transform-object-rest-spread"
+      "@babel/plugin-transform-runtime",
+      "@babel/plugin-proposal-object-rest-spread"
     ]
   },
   "peerDependencies": {

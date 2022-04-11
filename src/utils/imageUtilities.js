@@ -74,8 +74,9 @@ const cropImage = (img) => {
 const isImageData = (img) => {
   if (typeof (ImageData) === 'undefined') {
     return (
+      img &&
       typeof img === 'object' &&
-      img.data instanceof Uint8ClampedArray &&
+      (img.data instanceof Uint8ClampedArray || img.data instanceof Uint8Array) &&
       typeof img.width === 'number' &&
       typeof img.height === 'number'
     )

@@ -53,7 +53,7 @@ module.exports = {
   // forceCoverageMatch: [],
 
   // A path to a module which exports an async function that is triggered once before all test suites
-  // globalSetup: undefined,
+  globalSetup: './setupTests.js',
 
   // A path to a module which exports an async function that is triggered once after all test suites
   // globalTeardown: undefined,
@@ -118,7 +118,7 @@ module.exports = {
   // runner: "jest-runner",
 
   // The paths to modules that run some code to configure or set up the testing environment before each test
-  setupFiles: ["canvas", './setupTests.js'],
+  // setupFiles: ["canvas"],
 
   // A list of paths to modules that run some code to configure or set up the testing framework before each test
   // setupFilesAfterEnv: [],
@@ -154,7 +154,6 @@ module.exports = {
   // The regexp pattern or array of patterns that Jest uses to detect test files
   testRegex: [
     "(/__tests__/.*|(\\.|/)(test|spec))\\.[jt]sx?$",
-    "_test\\.js"
   ],
 
   // This option allows the use of a custom results processor

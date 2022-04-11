@@ -1,8 +1,16 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 const { ImageData } = require('canvas');
+// require('@tensorflow/tfjs-node');
 
-console.log("Beginning setup");
+async function setupTests() {
+  console.log("Beginning setup");
 
-global.ImageData = ImageData;
+  // Use the node-canvas ImageData polyfill
+  if (!global.ImageData) {
+    global.ImageData = ImageData;
+  }
 
-console.log("Setup complete");
+  console.log("Setup complete");
+}
+
+module.exports = setupTests;

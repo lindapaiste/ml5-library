@@ -1,5 +1,7 @@
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { createImageData } from "canvas";
 import { isImageData } from "./imageUtilities";
-import { getImageData, getRobin } from "./testingUtils";
+import { getRobin, randomImageData } from "./testingUtils";
 
 describe("imageUtilities", () => {
   const canvas = document.createElement('canvas');
@@ -13,9 +15,9 @@ describe("imageUtilities", () => {
       expect(isImageData(imgData)).toBe(true);
     });
     it("Can identify an ImageData object", async () => {
-      const emptyData = new ImageData(200, 200);
+      const emptyData = createImageData(200, 200);
       expect(isImageData(emptyData)).toBe(true);
-      const randomData = await getImageData();
+      const randomData = await randomImageData(200, 200);
       expect(isImageData(randomData)).toBe(true);
     })
     it("Will return false for other image types", async () => {

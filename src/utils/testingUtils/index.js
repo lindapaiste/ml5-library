@@ -1,3 +1,6 @@
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { createImageData, ImageData } from "canvas";
+
 export const asyncLoadImage = async (src) => {
   const img = new Image();
   if (src.startsWith('http')) {
@@ -22,5 +25,11 @@ export const randomImageData = (width = 200, height = 100) => {
     () => Math.floor(Math.random() * 256)
   );
   // Initialize a new ImageData object
-  return new ImageData(array, width, height);
+  return createImageData(array, width, height);
+}
+
+export const polyfillImageData = () => {
+  if (!global.ImageData) {
+    global.ImageData = ImageData;
+  }
 }

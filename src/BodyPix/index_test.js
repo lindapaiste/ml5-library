@@ -3,7 +3,8 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-import { asyncLoadImage, randomImageData } from "../utils/testingUtils";
+import { env } from "@tensorflow/tfjs-core";
+import { asyncLoadImage, polyfillImageData, randomImageData } from "../utils/testingUtils";
 import bodyPix from "./index";
 
 const BODYPIX_DEFAULTS = {
@@ -18,6 +19,8 @@ describe('bodyPix', () => {
   let bp;
 
   beforeAll(async () => {
+    polyfillImageData();
+    env().set('IS_BROWSER', false);
     jest.setTimeout(5000);
     bp = await bodyPix();
   });
