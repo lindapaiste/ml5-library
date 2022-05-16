@@ -8,7 +8,8 @@ Image Classifier using pre-trained networks
 */
 
 import * as tf from '@tensorflow/tfjs';
-import callCallback from '../utils/callcallback';
+import callCallback, { ML5Callback } from '../utils/callcallback';
+import constructorOverloads from '../utils/constructorOverloads';
 import generatedImageResult from '../utils/generatedImageResult';
 import handleArguments from "../utils/handleArguments";
 
@@ -18,7 +19,20 @@ const DEFAULTS = {
   returnTensors: false,
 }
 
+interface UnetOptions {
+  modelPath: string;
+  imageSize: number;
+  returnTensors: boolean;
+}
+
 class UNET {
+  public ready: Promise<UNET>;
+  public modelReady: boolean;
+  public isPredicting: boolean;
+  public config: UnetOptions;
+  public model?: tf.LayersModel;
+  public video?: HTMLVideoElement;
+
   /**
    * Create UNET class. 
    * @param {HTMLVideoElement | HTMLImageElement} video - The video or image to be used for segmentation.
@@ -26,15 +40,15 @@ class UNET {
    * @param {function} callback - Optional. A callback function that is called once the model has loaded. If no callback is provided, it will return a promise 
    *    that will be resolved once the model has loaded.
    */
-  constructor(video, options, callback) {
+  constructor(video?: HTMLVideoElement, options?: Partial<UnetOptions>, callback?: ML5Callback<UNET>) {
     this.modelReady = false;
     this.isPredicting = false;
     this.config = {
       modelPath: typeof options.modelPath !== 'undefined' ? options.modelPath : DEFAULTS.modelPath,
       imageSize: typeof options.imageSize !== 'undefined' ? options.imageSize : DEFAULTS.imageSize,
       returnTensors: typeof options.returnTensors !== 'undefined' ? options.returnTensors : DEFAULTS.returnTensors,
-
     };
+    this.video = video;
     this.ready = callCallback(this.loadModel(), callback);
   }
 
@@ -70,7 +84,7 @@ class UNET {
       let normTensor = resizedImg.div(tf.scalar(255));
       const batchedImage = normTensor.expandDims(0);
       // get the segmentation
-      const pred = this.model.predict(batchedImage);
+      const pred = this.model.predict(batchedImage) as tf.Tensor;
       
       // add back the alpha channel to the normalized input image
       const alpha = tf.ones([128, 128, 1]).tile([1,1,1])
@@ -95,9 +109,9 @@ class UNET {
       newpred = newpred.concat(alpha255, 2)
 
       return {
-        featureMask: featureMaskInternal,
-        backgroundMask: backgroundMaskInternal,
-        segmentation: newpred
+        featureMask: featureMaskInternal as tf.Tensor3D,
+        backgroundMask: backgroundMaskInternal as tf.Tensor3D,
+        segmentation: newpred as tf.Tensor3D
       };
     });
 
@@ -129,9 +143,6 @@ class UNET {
   }
 }
 
-const uNet = (...inputs) => {
-  const { video, options = {}, callback } = handleArguments(...inputs);
-  return new UNET(video, options, callback);
-};
+const uNet = constructorOverloads.videoOptionsCallback(UNET);
 
 export default uNet;
