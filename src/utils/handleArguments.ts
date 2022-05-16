@@ -1,27 +1,37 @@
 import * as tf from "@tensorflow/tfjs";
+import type { Image as P5Image, MediaElement as P5MediaElement, Graphics as P5Graphics, Renderer as P5Renderer } from "p5";
+
 /**
  * @typedef ImageElement
  * @type {HTMLImageElement | HTMLCanvasElement | HTMLVideoElement}
  */
+export type ImageElement = HTMLImageElement | HTMLCanvasElement | HTMLVideoElement;
 
 /**
  * Standard input accepted by most TensorFlow models.
  * @typedef InputImage
  * @type {ImageData | HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | tf.Tensor3D}
  */
+export type InputImage = ImageElement | ImageData | tf.Tensor3D;
+
+/**
+ * Accept p5 objects representing an image, video, audio, or canvas.
+ */
+export type P5Input = P5Image | P5MediaElement | P5Graphics | P5Renderer;
 
 /**
  * ML5 models accept all TensorFlow image inputs as well as p5 images and videos.
  * @typedef ImageArg
  * @type {InputImage | p5.Image | p5.Video | p5.Element}
  */
+export type ImageArg = InputImage | P5Input;
 
 /**
  * Check if a variable is an HTMLVideoElement.
  * @param {any} img
  * @returns {img is HTMLVideoElement}
  */
-export const isVideo = (img) => {
+export const isVideo = (img: any): img is HTMLVideoElement => {
   // Must guard all instanceof checks on DOM elements in order to run in node.
   return typeof (HTMLVideoElement) !== 'undefined' &&
     img instanceof HTMLVideoElement;
@@ -32,7 +42,7 @@ export const isVideo = (img) => {
  * @param {any} img
  * @returns {img is HTMLCanvasElement}
  */
-export const isCanvas = (img) => {
+export const isCanvas = (img: any): img is HTMLCanvasElement => {
   return typeof (HTMLCanvasElement) !== 'undefined' &&
     img instanceof HTMLCanvasElement;
 }
@@ -42,7 +52,7 @@ export const isCanvas = (img) => {
  * @param {any} img
  * @returns {img is HTMLImageElement}
  */
-export const isImg = (img) => {
+export const isImg = (img: any): img is HTMLImageElement => {
   return typeof (HTMLImageElement) !== 'undefined' &&
     img instanceof HTMLImageElement;
 }
@@ -52,7 +62,7 @@ export const isImg = (img) => {
  * @param {p5.Element | p5.Image} img
  * @returns {img is p5.Element | p5.Image}
  */
-export const isP5Image = (img) => {
+export const isP5Image = (img: any): img is P5Input => {
   return 'elt' in img || 'canvas' in img;
 }
 
@@ -63,7 +73,7 @@ export const isP5Image = (img) => {
  * @param {any} img
  * @returns {img is ImageData}
  */
-export const isImageData = (img) => {
+export const isImageData = (img: any): img is ImageData => {
   if (typeof (ImageData) === 'undefined') {
     return (
       typeof img === 'object' &&
@@ -81,7 +91,7 @@ export const isImageData = (img) => {
  * @param {any} img
  * @returns {img is tf.Tensor3D}
  */
-export const isTensor3D = (img) => {
+export const isTensor3D = (img: any): img is tf.Tensor3D => {
   return img instanceof tf.Tensor && img.rank === 3;
 }
 
@@ -90,7 +100,7 @@ export const isTensor3D = (img) => {
  * @param {any} img
  * @returns {img is ImageElement}
  */
-export const isImageElement = (img) => {
+export const isImageElement = (img: any): img is ImageElement => {
   return !!img && (isCanvas(img) || isImg(img) || isVideo(img));
 }
 
@@ -101,7 +111,7 @@ export const isImageElement = (img) => {
  * @param {any} img
  * @returns {ImageElement | null}
  */
-export const getImageElement = (img) => {
+export const getImageElement = (img: any): ImageElement | null => {
   if (isImageElement(img)) {
     return img;
   }
@@ -135,12 +145,40 @@ export const getImageElement = (img) => {
  * @property {HTMLVideoElement} [video] - Video elements also get their own property.
  * @property {InputImage} [image] - Any video, image, or image data.
  */
+export interface StandardArguments<OptionsType extends object = Record<string, any>, CallbackType extends Function = Function> {
+  string?: string;
+  number?: number;
+  callback?: CallbackType;
+  options?: OptionsType;
+  array?: any[];
+  audio?: HTMLMediaElement;
+  video?: HTMLVideoElement;
+  image?: InputImage;
+}
+
+type InferCallback<Arg> = Extract<Arg, Function>
+/**
+ * Look for an element of the array which is assignable to object,
+ * but not assignable to a more specific type (image, audio, array, callback)
+ */
+type InferOptions<Arg> = Exclude<Extract<Arg, object>, ImageArg | Function | any[]>;
+
+type SpecficArguments<ArgType> = StandardArguments<InferOptions<ArgType>, InferCallback<ArgType>>
 
 /**
  * @class ArgHelper
  * @implements {StandardArguments}
  */
-class ArgHelper {
+class ArgHelper<Arg extends any> implements SpecficArguments<Arg> {
+  string?: string;
+  number?: number;
+  callback?: InferCallback<Arg>;
+  options?: InferOptions<Arg>;
+  array?: any[];
+  audio?: HTMLMediaElement;
+  video?: HTMLVideoElement;
+  image?: InputImage;
+
   /**
    * Arguments used to CREATE an image-based model can be:
    *  - video: an HTMLVideoElement or p5 video.
@@ -162,7 +200,7 @@ class ArgHelper {
    *
    *  @param {any[]} [args]
    */
-  constructor(...args) {
+  constructor(...args: Arg[]) {
     args.forEach((arg) => this.addArg(arg));
   }
 
@@ -171,7 +209,7 @@ class ArgHelper {
    *
    * @param {any} arg
    */
-  addArg(arg) {
+  public addArg(arg: Arg): void {
     // skip over falsey arguments and don't throw any error, assuming that these are omissions
     // do this check first to prevent accessing properties on null, which is an object
     if (arg === undefined || arg === null) {
@@ -185,7 +223,7 @@ class ArgHelper {
         this.set({ number: arg });
         break;
       case "function":
-        this.set({ callback: arg });
+        this.set({ callback: arg as any });
         break;
       case "object": {
         if (isTensor3D(arg) || isImageData(arg)) {
@@ -210,7 +248,7 @@ class ArgHelper {
         }
         // All other objects are assumed to be options.
         else {
-          this.set({ options: arg });
+          this.set({ options: arg as any });
         }
         break;
       }
@@ -227,14 +265,15 @@ class ArgHelper {
    * @param {Partial<StandardArguments>} values
    * @param {boolean} warn
    */
-  set(values, warn = true) {
-    Object.keys(values).forEach(property => {
+  private set(values: Partial<SpecficArguments<Arg>>, warn = true): void {
+    (Object.keys(values) as (keyof StandardArguments)[]).forEach(property => {
       if (warn && this.has(property)) {
         console.warn(
           `Received multiple ${property} arguments, but only a single ${property} is supported.
           The last ${property} will be used.`
         );
       }
+      // @ts-ignore
       this[property] = values[property];
     });
   }
@@ -245,7 +284,7 @@ class ArgHelper {
    * @param {string & keyof StandardArguments} property
    * @returns {boolean}
    */
-  has(property) {
+  public has<K extends keyof StandardArguments>(property: K): this is this & Record<K, NonNullable<this[K]>> {
     return this[property] !== undefined;
   }
 
@@ -256,7 +295,7 @@ class ArgHelper {
    * @param {string} [message]
    * @return {this}
    */
-  require(property, message) {
+  public require<K extends keyof StandardArguments>(property: K, message?: string): this & Record<K, NonNullable<this[K]>> {
     if (this.has(property)) {
       return this;
     }
@@ -270,6 +309,10 @@ class ArgHelper {
  * @param {any[]} args
  * @return {ArgHelper}
  */
-export default function handleArguments(...args) {
-  return new ArgHelper(...args);
+export default function handleArguments<Arg = any>(...args: Arg[]): ArgHelper<Arg> {
+  // Note: can change target in tsconfig.json to use ...args
+  // TS2472: Spread operator in 'new' expressions is only available when targeting ECMAScript 5 and higher
+  const helper = new ArgHelper<Arg>();
+  args.forEach(arg => helper.addArg(arg));
+  return helper;
 };
