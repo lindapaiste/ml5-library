@@ -13,7 +13,7 @@ import * as tf from '@tensorflow/tfjs';
 import {Rank, Tensor, TensorLike} from '@tensorflow/tfjs';
 import * as knnClassifier from '@tensorflow-models/knn-classifier';
 import * as io from '../utils/io';
-import callCallback, {Callback} from '../utils/callcallback';
+import callCallback, {ML5Callback} from '../utils/callcallback';
 import {Tensor2D} from "@tensorflow/tfjs-core";
 import {ArgSeparator} from "../utils/argSeparator";
 import {ObjectBuilder} from "../utils/objectUtilities";
@@ -90,7 +90,7 @@ class KNN {
      * @param {number} kOrCallback  - Optional. The K value to use in K-nearest neighbors. The algorithm will first find the K nearest examples from those it was previously shown, and then choose the class that appears the most as the final prediction for the input example. Defaults to 3. If examples < k, k = examples.
      * @param {function} cb  - Optional. A function to be called once the input has been classified. If no callback is provided, it will return a promise that will be resolved once the model has classified the new input.
      */
-    async classify(input: Tensor | TensorLike, kOrCallback: number | Callback<KNNClassification>, cb?: Callback<KNNClassification>) {
+    async classify(input: Tensor | TensorLike, kOrCallback: number | ML5Callback<KNNClassification>, cb?: ML5Callback<KNNClassification>) {
         const {number: k = 3, callback} = new ArgSeparator(kOrCallback, cb);
         return callCallback(this.classifyInternal(asTensor(input), k), callback);
     }
@@ -205,7 +205,7 @@ class KNN {
      * @param {function} [callback] - Optional. A function to run once the dataset has been loaded.
      * If no callback is provided, it will return a promise that will be resolved once the dataset has loaded.
      */
-    async load(pathOrData: string | KNNSavedData, callback: Callback<void>): Promise<void> {
+    async load(pathOrData: string | KNNSavedData, callback: ML5Callback<void>): Promise<void> {
         return callCallback((async () => {
             let data;
             if (typeof pathOrData === 'object') {

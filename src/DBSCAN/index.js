@@ -5,7 +5,7 @@
 
 /* eslint "no-param-reassign": [2, { "props": false }] */
 /*
-DBSCAN Algorithm (with Euclidian distance). Influenced By jDBSCAN
+DBSCAN Algorithm (with Euclidean distance). Influenced By jDBSCAN
 */
 
 import * as tf from "@tensorflow/tfjs";
@@ -89,7 +89,7 @@ class DBSCAN {
   fit() {
     this.dataset.forEach((d, idx) => {
       if (d.status === undefined) {
-        d.status = 0; // initlize as a noise point
+        d.status = 0; // initialize as a noise point
         const neighboursIndices = this.getNeighboursIndices(d);
         if (neighboursIndices.length < this.config.minPts) {
           // Border or noise
@@ -108,11 +108,11 @@ class DBSCAN {
    * @param {number[]} neighboursIndices
    */
   extend(pointIndex, neighboursIndices) {
-    this.dataset[pointIndex].clusterid = this.getClusterId();
-    this.dataset[pointIndex].status = this.dataset[pointIndex].clusterid;
+    this.dataset[pointIndex].cluster = this.getClusterId();
+    this.dataset[pointIndex].status = this.dataset[pointIndex].cluster;
     neighboursIndices.forEach(neighbourIndex => {
       if (this.dataset[neighbourIndex].status === undefined) {
-        // Status unknown intialize as noise
+        // Status unknown initialize as noise
         this.dataset[neighbourIndex].status = 0;
         const currNeighbours = this.getNeighboursIndices(
           // Neighbours of this point
@@ -126,8 +126,8 @@ class DBSCAN {
         }
       }
       if (this.dataset[neighbourIndex].status < 1) {
-        this.dataset[neighbourIndex].status = this.dataset[pointIndex].clusterid;
-        this.dataset[neighbourIndex].clusterid = this.dataset[pointIndex].clusterid;
+        this.dataset[neighbourIndex].status = this.dataset[pointIndex].cluster;
+        this.dataset[neighbourIndex].cluster = this.dataset[pointIndex].cluster;
       }
     });
   }

@@ -9,6 +9,7 @@
     "downlevelIteration": true,
     "strictNullChecks": true,
     "esModuleInterop": true,
+    "skipLibCheck": true,
     "lib": [
       "esnext",
       "dom"

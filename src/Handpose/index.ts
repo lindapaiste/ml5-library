@@ -14,7 +14,7 @@
 import * as tf from "@tensorflow/tfjs";
 import * as handposeCore from "@tensorflow-models/handpose";
 import {EventEmitter} from "events";
-import callCallback, {Callback} from "../utils/callcallback";
+import callCallback, {ML5Callback} from "../utils/callcallback";
 import {extractImageElement, ImageArg, VideoArg} from "../utils/imageUtilities";
 import {ArgSeparator} from "../utils/argSeparator";
 import {createClass, createFactory} from "../utils/model-composition/MediaModel";
@@ -44,7 +44,7 @@ class Handpose extends EventEmitter {
      * @param {object} options - An object with options.
      * @param {function} callback - A callback to be called when the model is ready.
      */
-    constructor(video?: HTMLVideoElement, options: HandposeOptions = {}, callback?: Callback<Handpose>) {
+    constructor(video?: HTMLVideoElement, options: HandposeOptions = {}, callback?: ML5Callback<Handpose>) {
         super();
 
         this.video = video || null;
@@ -65,7 +65,7 @@ class Handpose extends EventEmitter {
 
         if (this.video && this.video.readyState === 0) {
             await new Promise<void>(resolve => {
-                this.video.onloadeddata = () => {
+                this.video!.onloadeddata = () => {
                     resolve();
                 };
             });
@@ -104,7 +104,7 @@ class Handpose extends EventEmitter {
     }
 }
 
-const handpose = (videoOrOptionsOrCallback: VideoArg | HandposeOptions | Callback<Handpose>, optionsOrCallback: HandposeOptions | Callback<Handpose>, cb?: Callback<Handpose>) => {
+const handpose = (videoOrOptionsOrCallback: VideoArg | HandposeOptions | ML5Callback<Handpose>, optionsOrCallback: HandposeOptions | ML5Callback<Handpose>, cb?: ML5Callback<Handpose>) => {
     const {options, video, callback} = new ArgSeparator(videoOrOptionsOrCallback, optionsOrCallback, cb);
     const instance = new Handpose(video, options, callback);
     return callback ? instance : instance.ready;

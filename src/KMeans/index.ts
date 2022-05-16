@@ -9,7 +9,7 @@ K-Means Algorithm (with Euclidean distance).
 */
 
 import * as tf from '@tensorflow/tfjs';
-import callCallback, {Callback} from '../utils/callcallback';
+import callCallback, { ML5Callback } from '../utils/callcallback';
 import {randomSample} from '../utils/random';
 
 /**
@@ -83,7 +83,7 @@ async function loadDataset(inputData: string | KMeansDataSet): number[][] {
  */
 class KMeans {
   config: KMeansOptions;
-  dataset: Array<[number, number] & {tensor: tf.Tensor<tf.Rank.R1>, centroid: number}>;
+  dataset: Array<number[] & {tensor: tf.Tensor1D, centroid: number}>;
   ready: Promise<KMeans>;
   dataTensor: tf.Tensor;
   centroids: tf.Tensor2D;
@@ -100,7 +100,7 @@ class KMeans {
    *    the model has loaded. If no callback is provided, it will return a 
    *    promise that will be resolved once the model has loaded.
    */
-  constructor(dataset: string | KMeansDataSet, options: Partial<KMeansOptions> = {}, callback?: Callback<KMeans>) {
+  constructor(dataset: string | KMeansDataSet, options: Partial<KMeansOptions> = {}, callback?: ML5Callback<KMeans>) {
     this.config = {
       ...options,
       ...DEFAULTS

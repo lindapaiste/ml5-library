@@ -1,5 +1,5 @@
 import {ArgumentValidator, classifyArguments, ValidatedResults} from "../argumentValidator";
-import callCallback, {Callback} from "../callcallback";
+import callCallback, {ML5Callback} from "../callcallback";
 
 export type AsArgs<ArgMap extends Record<string, ArgumentValidator<any>>> = {
     [K in keyof ArgMap]: ReturnType<ArgMap[K]['validate']>;
@@ -36,7 +36,7 @@ type Element<T> = T extends Array<infer U> ? U : never;
 export const wrapAsyncMethod = <M extends (...args: any[]) => Promise<any>>(method: M) => {
     // add a callback argument
     // accept the args optionally and in any order
-    return (...args: Array<Element<Parameters<M>> | Callback<Unpromise<ReturnType<M>>>>) => {
+    return (...args: Array<Element<Parameters<M>> | ML5Callback<Unpromise<ReturnType<M>>>>) => {
 
     }
 }

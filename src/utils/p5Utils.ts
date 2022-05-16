@@ -141,4 +141,6 @@ class P5Util {
 
 const p5Utils = new P5Util();
 
+export type P5Image = p5.Image;
+
 export default p5Utils;

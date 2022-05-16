@@ -1,5 +1,5 @@
 import * as USE from '@tensorflow-models/universal-sentence-encoder';
-import callCallback, {Callback} from '../utils/callcallback';
+import callCallback, { ML5Callback } from '../utils/callcallback';
 import {AsyncModel, constructWithCallback, Ready} from "../utils/model-composition/AsyncModel";
 import {ArgSeparator} from "../utils/argSeparator";
 
@@ -41,7 +41,7 @@ class UniversalSentenceEncoder extends AsyncModel<USE.UniversalSentenceEncoder, 
    * @param {function} callback
    * @return {Promise}
    */
-  predict(text: string | string[], callback?: Callback<number[][]>){
+  predict(text: string | string[], callback?: ML5Callback<number[][]>){
     return this.callWhenReady(this.predictInternal, callback, "predict", text);
   }
 
@@ -64,7 +64,7 @@ class UniversalSentenceEncoder extends AsyncModel<USE.UniversalSentenceEncoder, 
    * @param {function} callback
    * @return {Promise}
    */
-  encode(textString: string, callback?: Callback<number[]>){
+  encode(textString: string, callback?: ML5Callback<number[]>){
     return this.callWhenReady(this.encodeInternal, callback, "encode", textString);
   }
 
@@ -87,7 +87,7 @@ class UniversalSentenceEncoder extends AsyncModel<USE.UniversalSentenceEncoder, 
  * @param {function} [cb]
  * @return {UniversalSentenceEncoder | Promise<UniversalSentenceEncoder>}
  */
-const universalSentenceEncoder = (optionsOr?: USEOptions | Callback<UniversalSentenceEncoder>, cb?: Callback<UniversalSentenceEncoder>) => {
+const universalSentenceEncoder = (optionsOr?: USEOptions | ML5Callback<UniversalSentenceEncoder>, cb?: ML5Callback<UniversalSentenceEncoder>) => {
   const {options, callback} = new ArgSeparator(optionsOr, cb);
   return constructWithCallback(UniversalSentenceEncoder, options, callback);
 };

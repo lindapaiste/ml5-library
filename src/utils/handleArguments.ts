@@ -1,7 +1,7 @@
-import { tensor3d } from "@tensorflow/tfjs";
 import * as tf from "@tensorflow/tfjs";
+import { createCanvas, Image as cImage, ImageData as cImageData } from "canvas";
 import type p5 from 'p5';
-import { createCanvas, Image as cImage , ImageData as cImageData } from "canvas";
+import { ML5Callback } from "./callcallback";
 
 /**
  * @typedef ImageElement
@@ -24,6 +24,8 @@ export type InputImage = ImageData | HTMLImageElement | HTMLCanvasElement | HTML
  * @type {InputImage | p5.Image | p5.Video | p5.Element}
  */
 export type ImageArg = InputImage | p5.Image | p5.Element | p5.Graphics | cImage | cImageData | PixelData
+
+export type VideoArg = HTMLVideoElement | p5.MediaElement;
 
 /**
  * Check if a variable is an HTMLVideoElement.
@@ -99,18 +101,22 @@ export const isTensor3D = (img: unknown): img is tf.Tensor3D => {
  * @param {any} img
  * @returns {img is ImageElement}
  */
-export const isImageElement = (img: unknown): img is ImageElement => {
+export const isImageElement = <T = unknown>(img: T): img is T & ImageElement => {
   return !!img && (isCanvas(img) || isImg(img) || isVideo(img));
 }
 
 /**
  * Check that the provided image is an acceptable format and return it.
  * If it is a p5 Image, return the underlying HTML element.
- * Otherwise, return null.
+ * Otherwise, return undefined.
+ * Use overloads to refine the return type based on the argument type.
  * @param {any} img
  * @returns {ImageElement | null}
  */
-export const getImageElement = (img: any): ImageElement | null => {
+export function getImageElement<T extends ImageElement>(img: T | { canvas: T } | { elt: T }): T
+export function getImageElement<T extends ImageElement>(img: T | { canvas: T } | { elt: T } | unknown): T | undefined
+export function getImageElement(img: unknown): ImageElement | undefined
+export function getImageElement(img: any): ImageElement | undefined {
   if (isImageElement(img)) {
     return img;
   }
@@ -122,18 +128,18 @@ export const getImageElement = (img: any): ImageElement | null => {
       return img.elt;
     }
   }
-  return null;
+  return undefined;
 }
 
-const convertImageData = ({width, height, data}: PixelData | ImageData): tf.Tensor3D => {
-  return tf.browser.fromPixels({width, height, data: new Uint8Array(data)});
+const convertImageData = ({ width, height, data }: PixelData | ImageData): tf.Tensor3D => {
+  return tf.browser.fromPixels({ width, height, data: new Uint8Array(data) });
 }
 
 export const handlePolyfill = (img: any): tf.Tensor3D | null => {
-  if ( isImageData(img) ) {
+  if (isImageData(img)) {
     return convertImageData(img)
   }
-  if ( img instanceof cImage) {
+  if (img instanceof cImage) {
     const canvas = createCanvas(img.width, img.height);
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0, img.width, img.height);
@@ -144,10 +150,46 @@ export const handlePolyfill = (img: any): tf.Tensor3D | null => {
 }
 
 export const toTensor = (img: InputImage): tf.Tensor3D => {
-  if ( isTensor3D(img)) {
+  if (isTensor3D(img)) {
     return img;
   }
   return tf.browser.fromPixels(img);
+}
+
+
+interface StandardArguments {
+  /**
+   * A model name or any other string argument.
+   */
+  string?: string;
+  /**
+   * Any numeric argument, such as number of classes, maximum iterations, accuracy, etc.
+   */
+  number?: number;
+  /**
+   * A callback function.
+   */
+  callback?: ML5Callback<any>;
+  /**
+   * Any object which is not a media object is assumed to be options.
+   */
+  options?: Record<string, any>;
+  /**
+   * Any array.
+   */
+  array?: any[];
+  /**
+   * Both video and audio-only elements will be assigned to the audio property.
+   */
+  audio?: HTMLMediaElement;
+  /**
+   * Video elements also get their own property.
+   */
+  video?: HTMLVideoElement;
+  /**
+   * Any video, image, or image data.
+   */
+  image?: InputImage;
 }
 
 /**
@@ -157,24 +199,7 @@ export const toTensor = (img: InputImage): tf.Tensor3D => {
  * Creates an object where each argument is assigned to a named property.
  * All properties are optional as arguments might be missing.
  */
-
-/**
- * @typedef {object} StandardArguments
- * @property {string} [string] - A model name or any other string argument.
- * @property {number} [number] - Any numeric argument.
- * @property {function} [callback] - A callback function.
- * @property {object} [options] - Any object which is not a media object is assumed to be options.
- * @property {Array<any>} [array] - Any array.
- * @property {HTMLMediaElement} [audio] - Both video and audio-only elements will be assigned to the audio property.
- * @property {HTMLVideoElement} [video] - Video elements also get their own property.
- * @property {InputImage} [image] - Any video, image, or image data.
- */
-
-/**
- * @class ArgHelper
- * @implements {StandardArguments}
- */
-class ArgHelper<Args extends any[]> {
+class ArgHelper<Args extends any[]> implements StandardArguments {
 
   /**
    * Strict types here mean no errors when destructuring,
@@ -187,7 +212,8 @@ class ArgHelper<Args extends any[]> {
   callback?: Extract<Args[number], Function>;
   string?: string;
   number?: number;
-  array?: any[];
+  array?: Extract<Args[number], any[]>;
+
   /**
    * Arguments used to CREATE an image-based model can be:
    *  - video: an HTMLVideoElement or p5 video.
@@ -251,7 +277,7 @@ class ArgHelper<Args extends any[]> {
           // TODO: handle audio elements and p5.sound
         // Check for arrays
         else if (Array.isArray(arg)) {
-          this.array = arg;
+          this.array = arg as any;
         }
         // All other objects are assumed to be options.
         else {
@@ -271,7 +297,7 @@ class ArgHelper<Args extends any[]> {
    * @param {string & keyof StandardArguments} property
    * @returns {boolean}
    */
-  has<K extends keyof this>(property: K): this is this & Record<K, NonNullable<this[K]>> {
+  has<K extends keyof StandardArguments>(property: K): this is this & Record<K, NonNullable<this[K]>> {
     return this[property] !== undefined;
   }
 
@@ -282,7 +308,7 @@ class ArgHelper<Args extends any[]> {
    * @param {string} [message]
    * @return {this}
    */
-  require<K extends keyof this>(property: K, message?: string): this & Record<K, NonNullable<this[K]>> {
+  require<K extends keyof StandardArguments>(property: K, message?: string): this & Record<K, NonNullable<this[K]>> {
     if (this.has(property)) {
       return this;
     }
@@ -292,10 +318,7 @@ class ArgHelper<Args extends any[]> {
 
 /**
  * Export a chainable method instead of the class itself.
- *
- * @param {any[]} args
- * @return {ArgHelper}
  */
-export default function handleArguments(...args: any[]) {
-  return new ArgHelper(...args);
+export default function handleArguments<Args extends any[]>(...args: Args) {
+  return new ArgHelper<Args>(...args);
 };

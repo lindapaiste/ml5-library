@@ -2,6 +2,8 @@ import type p5 from "p5";
 
 export type RGB = [number, number, number];
 
+export type P5Color = p5.Color;
+
 /**
  * Convert a p5 Color object into an array of R,G,B values.
  * Note: moved from BodyPix.

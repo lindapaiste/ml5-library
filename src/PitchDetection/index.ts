@@ -10,7 +10,7 @@
 */
 
 import * as tf from '@tensorflow/tfjs';
-import callCallback, {Callback} from '../utils/callcallback';
+import callCallback, {ML5Callback} from '../utils/callcallback';
 import modelLoader from "../utils/modelLoader";
 
 class PitchDetection {
@@ -57,7 +57,7 @@ class PitchDetection {
    * @param {MediaStream} stream  - The media stream to use.
    * @param {function} callback  - Optional. A callback to be called once the model has loaded. If no callback is provided, it will return a promise that will be resolved once the model has loaded.
    */
-  constructor(model: string, audioContext: AudioContext, stream: MediaStream, callback?: Callback<PitchDetection>) {
+  constructor(model: string, audioContext: AudioContext, stream: MediaStream, callback?: ML5Callback<PitchDetection>) {
     this.audioContext = audioContext;
     this.stream = stream;
     this.frequency = null;
@@ -142,7 +142,7 @@ class PitchDetection {
    * @param {function} callback - Optional. A function to be called when the model has generated content. If no callback is provided, it will return a promise that will be resolved once the model has predicted the pitch.
    * @returns {number}
    */
-  public async getPitch(callback: Callback<number | null>): Promise<number | null> {
+  public async getPitch(callback: ML5Callback<number | null>): Promise<number | null> {
     return callCallback( ( async () => {
       await this.ready;
       await tf.nextFrame();
@@ -170,6 +170,6 @@ class PitchDetection {
 }
 
 // TODO: "If no callback is provided, it will return a promise that will be resolved once the model has loaded."
-const pitchDetection = (modelPath = './', context: AudioContext, stream: MediaStream, callback: Callback<PitchDetection>) => new PitchDetection(modelPath, context, stream, callback);
+const pitchDetection = (modelPath = './', context: AudioContext, stream: MediaStream, callback: ML5Callback<PitchDetection>) => new PitchDetection(modelPath, context, stream, callback);
 
 export default pitchDetection;

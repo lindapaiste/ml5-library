@@ -8,9 +8,9 @@ describe("ModelLoader utility functions", () => {
         const fileName = createDateFileName();
         const regex = new RegExp(/^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$/);
         // Verify that the regex is correct by checking against an expected output
-        expect(regex.test( "2021-05-02_19-21-42")).toBeTrue();
+        expect(regex.test( "2021-05-02_19-21-42")).toBe(true);
         // Check the created file name against the regex
-        expect(regex.test( fileName)).toBeTrue();
+        expect(regex.test( fileName)).toBe(true);
     });
 })
 
@@ -35,7 +35,7 @@ describe("ModelLoader class", () => {
 
     it("Can turn a relative URL to absolute", () => {
         // TODO: how to test this properly?  It depends on window.location.
-        expect(relativeLoader.getAbsolutePath().startsWith("http")).toBeTrue();
+        expect(relativeLoader.getAbsolutePath().startsWith("http")).toBe(true);
         // Absolute path is unchanged
         expect(absoluteLoader.getAbsolutePath()).toBe(absoluteUrl);
     });

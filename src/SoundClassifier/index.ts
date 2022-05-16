@@ -9,7 +9,7 @@ Sound Classifier using pre-trained networks
 
 import * as tf from '@tensorflow/tfjs';
 import * as speechCommands from './speechcommands';
-import callCallback, {Callback} from '../utils/callcallback';
+import callCallback, {ML5Callback} from '../utils/callcallback';
 import {ArgSeparator} from "../utils/argSeparator";
 import {LabelAndConfidence} from "../utils/gettopkclasses";
 
@@ -40,7 +40,7 @@ class SoundClassifier {
    * @param {object} options - An object with options.
    * @param {function} callback - A callback to be called when the model is ready.
    */
-  constructor(modelNameOrUrl: string, options: SoundClassifierOptions = {}, callback?: Callback<SoundClassifier>) {
+  constructor(modelNameOrUrl: string, options: SoundClassifierOptions = {}, callback?: ML5Callback<SoundClassifier>) {
     this.config = options;
     // TODO: how should custom URLs be handled?  Right now just loading SpeechCommands with the path as the artifacts URL.  What about metadata?
     const loader = speechCommands.load;
@@ -75,13 +75,13 @@ class SoundClassifier {
    * @param {function} cb - a callback function that handles the results of the function.
    * @return a promise or the results of a given callback, cb.
    */
-  async classify(numOrCallback: number | Callback<LabelAndConfidence[]>, cb?: Callback<LabelAndConfidence[]>): Promise<LabelAndConfidence[]> {
+  async classify(numOrCallback: number | ML5Callback<LabelAndConfidence[]>, cb?: ML5Callback<LabelAndConfidence[]>): Promise<LabelAndConfidence[]> {
     const {number, callback} = new ArgSeparator(numOrCallback, cb);
     return callCallback(this.classifyInternal(number), callback);
   }
 }
 
-const soundClassifier = (modelName: string, optionsOrCallback?: SoundClassifierOptions | Callback<SoundClassifier>, cb?: Callback<SoundClassifier>) => {
+const soundClassifier = (modelName: string, optionsOrCallback?: SoundClassifierOptions | ML5Callback<SoundClassifier>, cb?: ML5Callback<SoundClassifier>) => {
   const {string: model, options, callback} = new ArgSeparator(modelName, optionsOrCallback, cb);
   if (! model) {
     // TODO: should probably just default to speech commands

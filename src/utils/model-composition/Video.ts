@@ -7,7 +7,7 @@
 Image and Video base class
 */
 
-import {extractVideoElement, VideoArg} from "../imageUtilities";
+import { getImageElement, VideoArg } from "../handleArguments";
 
 class Video {
 
@@ -17,7 +17,7 @@ class Video {
     video?: HTMLVideoElement;
 
     constructor(video: VideoArg | undefined, size: number) {
-        this.videoElt = extractVideoElement(video);
+        this.videoElt = getImageElement<HTMLVideoElement>(video);
         this.size = size;
         this.videoReady = false;
     }

@@ -13,7 +13,7 @@ import * as tf from "@tensorflow/tfjs";
 import {LSTMCellFunc, Rank, Tensor, Tensor1D} from "@tensorflow/tfjs";
 import sampleFromDistribution from "../utils/sample";
 import CheckpointLoader from "../utils/checkpointLoader";
-import callCallback, {Callback} from "../utils/callcallback";
+import callCallback, {ML5Callback} from "../utils/callcallback";
 import {Tensor2D} from "@tensorflow/tfjs-core";
 import {validateRank} from "../utils/imageConversion";
 import {loadFile} from "../utils/io";
@@ -132,7 +132,7 @@ class CharRNN {
      *    the model has loaded. If no callback is provided, it will return a
      *    promise that will be resolved once the model has loaded.
      */
-    constructor(modelPath: string, callback?: Callback<CharRNN>) {
+    constructor(modelPath: string, callback?: ML5Callback<CharRNN>) {
         /**
          * Boolean value that specifies if the model has loaded.
          * @type {boolean}
@@ -246,7 +246,7 @@ class CharRNN {
      *    has generated content. If no callback is provided, it will return a promise
      *    that will be resolved once the model has generated new content.
      */
-    async generate(options: CharRNNOptions, callback: Callback<GenerateResult>) {
+    async generate(options: CharRNNOptions, callback: ML5Callback<GenerateResult>) {
         this.reset();
         return callCallback(this.generateInternal(options), callback);
     }
@@ -306,7 +306,7 @@ class CharRNN {
      *    model finished adding the seed. If no callback is provided, it will
      *    return a promise that will be resolved once the prediction has been generated.
      */
-    async predict(temp: number, callback: Callback<PredictResult>) {
+    async predict(temp: number, callback: ML5Callback<PredictResult>) {
         return callCallback(this.predictInternal(temp), callback);
     }
 
@@ -334,7 +334,7 @@ class CharRNN {
      *    the model finished adding the seed. If no callback is provided, it
      *    will return a promise that will be resolved once seed has been fed.
      */
-    async feed(inputSeed: string, callback?: Callback<void>) {
+    async feed(inputSeed: string, callback?: ML5Callback<void>) {
         return callCallback(this.feedInternal(inputSeed), callback);
     }
 
@@ -348,6 +348,6 @@ class CharRNN {
     }
 }
 
-const charRNN = (modelPath = "./", callback?: Callback<CharRNN>) => new CharRNN(modelPath, callback);
+const charRNN = (modelPath = "./", callback?: ML5Callback<CharRNN>) => new CharRNN(modelPath, callback);
 
 export default charRNN;

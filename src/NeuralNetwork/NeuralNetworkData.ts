@@ -2,7 +2,6 @@ import * as tf from '@tensorflow/tfjs';
 import axios from 'axios';
 import {loadFile, saveBlob} from '../utils/io';
 import handleArguments from "../utils/handleArguments";
-import { saveBlob } from '../utils/io';
 import nnUtils from './NeuralNetworkUtils';
 import callCallback, {Callback} from "../utils/callcallback";
 import {ArgSeparator} from "../utils/argSeparator";

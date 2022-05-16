@@ -9,7 +9,7 @@
 
 import * as tf from '@tensorflow/tfjs';
 import {LayersModel, Rank, Tensor, Tensor4D} from '@tensorflow/tfjs';
-import callCallback, {Callback} from '../utils/callcallback';
+import callCallback, {ML5Callback} from '../utils/callcallback';
 import {loadFile} from "../utils/io";
 import {GeneratedImageResult, generatedImageResult} from "../utils/GeneratedImage";
 
@@ -94,7 +94,7 @@ class Cvae {
   public model?: LayersModel; // not actually documented so maybe unneeded
   private cvae?: CvaeModel; // the underlying model class
 
-  constructor(modelPath: string, callback?: Callback<Cvae>) {
+  constructor(modelPath: string, callback?: ML5Callback<Cvae>) {
     this.ready = callCallback( (async () => {
       this.cvae = await createCvaeModel(modelPath);
       this.model = this.cvae.model;
@@ -102,7 +102,7 @@ class Cvae {
     })(), callback)
   }
 
-  async generate(label: string, callback?: Callback<CVAEResult>): Promise<CVAEResult> {
+  async generate(label: string, callback?: ML5Callback<CVAEResult>): Promise<CVAEResult> {
     await this.ready;
     return callCallback(this.cvae!.generate(label), callback);
   }
@@ -115,7 +115,7 @@ class Cvae {
  * @param {function} callback
  * @constructor
  */
-const CVAE = (model: string, callback?: Callback<Cvae>) => new Cvae(model, callback);
+const CVAE = (model: string, callback?: ML5Callback<Cvae>) => new Cvae(model, callback);
 
 
 export default CVAE;

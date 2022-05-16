@@ -10,14 +10,14 @@
 
 import * as tf from '@tensorflow/tfjs';
 import * as bp from '@tensorflow-models/body-pix';
-import callCallback, {Callback} from '../utils/callcallback';
+import callCallback, { ML5Callback } from '../utils/callcallback';
+import { InputImage } from "../utils/handleArguments";
 import p5Utils, {P5Image} from '../utils/p5Utils';
 import BODYPIX_PALETTE from './BODYPIX_PALETTE';
 import {MobileNetMultiplier, OutputStride} from "@tensorflow-models/body-pix/dist/mobilenet";
 import {ArgSeparator} from "../utils/argSeparator";
-import {TfImageSource} from "../utils/imageUtilities";
 import {Tensor3D} from "@tensorflow/tfjs-core";
-import {isP5Color, P5Color, p5ColorToRGB, RGB} from "../utils/colorUtilities";
+import { isP5Color, P5Color, p5Color2RGB, RGB } from "../utils/colorUtilities";
 import {toTensor} from "../utils/imageConversion";
 import {generatedImageResult} from "../utils/GeneratedImage";
 
@@ -114,7 +114,7 @@ class BodyPix {
         ...palette,
         [part]: {
           id,
-          color: isP5Color(color) ? p5ColorToRGB(color) : color,
+          color: isP5Color(color) ? p5Color2RGB(color) : color,
         }
       }
     }, {});
@@ -129,7 +129,7 @@ class BodyPix {
    *    includes outputStride, segmentationThreshold
    * @return {Object} a result object with image, raw, bodyParts
    */
-  public async segmentWithPartsInternal(imgToSegment: TfImageSource, segmentationOptions?: Partial<BodyPixOptions>) {
+  public async segmentWithPartsInternal(imgToSegment: InputImage, segmentationOptions?: Partial<BodyPixOptions>) {
     // estimatePartSegmentation
     await this.ready;
     await tf.nextFrame();
@@ -367,7 +367,7 @@ class BodyPix {
    * @param {function} cb - a callback function that handles the results of the function.
    * @return {function} a promise or the results of a given callback, cb.
    */
-  async segment(optionsOrCallback?: TfImageSource, configOrCallback?: BodyPixOptions, cb?: Callback<any>) {
+  async segment(optionsOrCallback?: TfImageSource, configOrCallback?: BodyPixOptions, cb?: ML5Callback<any>) {
     const {image, options, callback} = ArgSeparator.from(this.video, optionsOrCallback, configOrCallback, cb)
         .require(
             'image',
@@ -378,7 +378,7 @@ class BodyPix {
 
 }
 
-const bodyPix = (videoOrOptionsOrCallback?: HTMLVideoElement | BodyPixOptions | Callback<BodyPix>, optionsOrCallback?: BodyPixOptions | Callback<BodyPix>, cb?: Callback<BodyPix>) => {
+const bodyPix = (videoOrOptionsOrCallback?: HTMLVideoElement | BodyPixOptions | ML5Callback<BodyPix>, optionsOrCallback?: BodyPixOptions | ML5Callback<BodyPix>, cb?: ML5Callback<BodyPix>) => {
   const {video, options, callback} = new ArgSeparator(videoOrOptionsOrCallback, optionsOrCallback, cb);
 
   const instance = new BodyPix(video, options, callback);

@@ -16,6 +16,8 @@
  * @return {void} - callbacks can have side effects, but should not return a value.
  */
 export type ML5Callback<T> = (error: unknown, result?: T) => void;
+// back-compat
+export type Callback<T> = (error: unknown, result?: T) => void;
 
 /**
  * Generic type T describes the type of the result, ie. the value that the Promise will resolve to.

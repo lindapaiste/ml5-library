@@ -8,7 +8,7 @@ Word2Vec
 */
 
 import * as tf from '@tensorflow/tfjs';
-import callCallback, {Callback, maybeCall} from '../utils/callcallback';
+import callCallback, {ML5Callback} from '../utils/callcallback';
 import {loadFile} from "../utils/io";
 import {ArgSeparator} from "../utils/argSeparator";
 
@@ -74,7 +74,7 @@ class Word2Vec {
      * @param {function} callback - Optional. A callback function that is called once the model has loaded. If no callback is provided, it will return a promise
      *    that will be resolved once the model has loaded.
      */
-    constructor(modelPath: string, callback: Callback<Word2Vec>) {
+    constructor(modelPath: string, callback: ML5Callback<Word2Vec>) {
         this.model = {};
         this.word2vec = new Word2VecModel({});
         this.modelSize = 0;
@@ -106,12 +106,12 @@ class Word2Vec {
      * TODO: this isn't async, so what's the point of a callback?
      * @param callback
      */
-    dispose(callback: () => void) {
+    dispose(callback?: () => void) {
         Object.values(this.model).forEach(x => x.dispose());
-        maybeCall(callback);
+        callback?.();
     }
 
-    async add(inputs: string[], maxOrCb?: number | Callback<WordDistance[]>, cb?: Callback<WordDistance[]>): Promise<WordDistance[]> {
+    async add(inputs: string[], maxOrCb?: number | ML5Callback<WordDistance[]>, cb?: ML5Callback<WordDistance[]>): Promise<WordDistance[]> {
         const {number = 1, callback} = new ArgSeparator(maxOrCb, cb);
 
         return callCallback((async () => {
@@ -124,7 +124,7 @@ class Word2Vec {
     }
 
     // TODO: can combine with add
-    async subtract(inputs: string[], maxOrCb?: number | Callback<WordDistance[]>, cb?: Callback<WordDistance[]>): Promise<WordDistance[]> {
+    async subtract(inputs: string[], maxOrCb?: number | ML5Callback<WordDistance[]>, cb?: ML5Callback<WordDistance[]>): Promise<WordDistance[]> {
         const {number = 1, callback} = new ArgSeparator(maxOrCb, cb);
 
         return callCallback((async () => {
@@ -136,7 +136,7 @@ class Word2Vec {
         })(), callback);
     }
 
-    async average(inputs: string[], maxOrCb?: number | Callback<WordDistance>[], cb?: Callback<WordDistance>[]): Promise<WordDistance[]> {
+    async average(inputs: string[], maxOrCb?: number | ML5Callback<WordDistance>[], cb?: ML5Callback<WordDistance>[]): Promise<WordDistance[]> {
         const {number = 1, callback} = new ArgSeparator(maxOrCb, cb);
 
         return callCallback((async () => {
@@ -149,7 +149,7 @@ class Word2Vec {
         })(), callback);
     }
 
-    async nearest(input: string, maxOrCb?: number | Callback<WordDistance>[], cb?: Callback<WordDistance>[]): Promise<WordDistance[]> {
+    async nearest(input: string, maxOrCb?: number | ML5Callback<WordDistance>[], cb?: ML5Callback<WordDistance>[]): Promise<WordDistance[]> {
         const {number = 10, callback} = new ArgSeparator(maxOrCb, cb);
 
         return callCallback((async () => {
@@ -163,7 +163,7 @@ class Word2Vec {
     }
 
     /* Given a set of your own words, find the nearest neighbors */
-    async nearestFromSet(input: string, set: string[], maxOrCb: number | Callback<WordDistance[]>, cb?: Callback<WordDistance[]>): Promise<WordDistance[]> {
+    async nearestFromSet(input: string, set: string[], maxOrCb: number | ML5Callback<WordDistance[]>, cb?: ML5Callback<WordDistance[]>): Promise<WordDistance[]> {
         const {number = 10, callback} = new ArgSeparator(maxOrCb, cb);
 
         return callCallback((async () => {
@@ -192,7 +192,7 @@ class Word2Vec {
         })(), callback);
     }
 
-    async getRandomWord(callback: Callback<string>): Promise<string> {
+    async getRandomWord(callback: ML5Callback<string>): Promise<string> {
         return callCallback((async () => {
             await this.ready;
             const words = Object.keys(this.model);
@@ -202,7 +202,7 @@ class Word2Vec {
 
     createCallbackMethod = <M extends (...args: any[]) => any>(innerMethod: M) => {
         // TODO: promisify return type
-        return async (...args: Parameters<M> | [...Parameters<M>, Callback<ReturnType<M>>]) => {
+        return async (...args: Parameters<M> | [...Parameters<M>, ML5Callback<ReturnType<M>>]) => {
             const last = args[args.length - 1];
             const callback = typeof last === "function" ? last as ModelCallback<Model> : undefined;
             return callCallback((async () => {
@@ -213,6 +213,6 @@ class Word2Vec {
     }
 }
 
-const word2vec = (model: string, cb: Callback<Word2Vec>) => new Word2Vec(model, cb);
+const word2vec = (model: string, cb: ML5Callback<Word2Vec>) => new Word2Vec(model, cb);
 
 export default word2vec;

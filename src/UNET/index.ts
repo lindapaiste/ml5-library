@@ -8,10 +8,10 @@ Image Classifier using pre-trained networks
 */
 
 import * as tf from '@tensorflow/tfjs';
-import callCallback, {Callback} from '../utils/callcallback';
+import callCallback, { ML5Callback } from '../utils/callcallback';
 import {ArgSeparator} from "../utils/argSeparator";
 import {generatedImageResult, groupedResult} from "../utils/GeneratedImage";
-import {ImageArg, TfImageSource} from "../utils/imageUtilities";
+import { ImageArg, InputImage } from "../utils/handleArguments";
 import {toTensor} from "../utils/imageConversion";
 import {Tensor} from "@tensorflow/tfjs-core";
 import {P5Image} from "../utils/p5Utils";
@@ -63,7 +63,7 @@ class UNET {
    * @param {function} callback - Optional. A callback function that is called once the model has loaded. If no callback is provided, it will return a promise 
    *    that will be resolved once the model has loaded.
    */
-  constructor(video?: HTMLVideoElement, options?: UNETOptions, callback?: Callback<UNET>) {
+  constructor(video?: HTMLVideoElement, options?: UNETOptions, callback?: ML5Callback<UNET>) {
     this.modelReady = false;
     this.isPredicting = false;
     this.config = {
@@ -79,12 +79,12 @@ class UNET {
     return this;
   }
 
-  public async segment(inputOrCallback?: ImageArg | Callback<UNETSegmentation>, cb?: Callback<UNETSegmentation>): Promise<UNETSegmentation> {
+  public async segment(inputOrCallback?: ImageArg | ML5Callback<UNETSegmentation>, cb?: ML5Callback<UNETSegmentation>): Promise<UNETSegmentation> {
     const {image, callback} = new ArgSeparator(inputOrCallback, cb);
     return callCallback(this.segmentInternal(image), callback);
   }
 
-  private async createMasks(imgToPredict: TfImageSource) {
+  private async createMasks(imgToPredict: InputImage) {
     return tf.tidy(() => {
       // preprocess the input image
       const tfImage = toTensor(imgToPredict).toFloat();
@@ -129,7 +129,7 @@ class UNET {
     });
   }
 
-  private async segmentInternal(imgToPredict: TfImageSource): Promise<UNETSegmentation> {
+  private async segmentInternal(imgToPredict: InputImage): Promise<UNETSegmentation> {
     // Wait for the model to be ready
     await this.ready;
     // skip asking for next frame if it's not video
@@ -162,7 +162,7 @@ class UNET {
   }
 }
 
-const uNet = (videoOr?: HTMLVideoElement | UNETOptions | Callback<UNET>, optionsOr?: UNETOptions | Callback<UNET>, cb?: Callback<UNET>) => {
+const uNet = (videoOr?: HTMLVideoElement | UNETOptions | ML5Callback<UNET>, optionsOr?: UNETOptions | ML5Callback<UNET>, cb?: ML5Callback<UNET>) => {
 const {video, options, callback} = new ArgSeparator(videoOr, optionsOr, cb);
   return new UNET(video, options, callback);
 };

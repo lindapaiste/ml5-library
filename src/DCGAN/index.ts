@@ -9,7 +9,7 @@ This version is based on alantian's TensorFlow.js implementation: https://github
 */
 
 import * as tf from '@tensorflow/tfjs';
-import callCallback, {Callback} from '../utils/callcallback';
+import callCallback, {ML5Callback} from '../utils/callcallback';
 import modelLoader, {isAbsoluteURL} from "../utils/modelLoader";
 import {GeneratedImageResult, generatedImageResult} from "../utils/GeneratedImage";
 import {ArgSeparator} from "../utils/argSeparator";
@@ -49,7 +49,7 @@ class DCGANBase {
      * @param {DCGANOptions} [options]
      * @param {function} [callback] - A callback to be called when the model is ready.
      */
-    constructor(modelPath: string, options: DCGANOptions = {}, callback?: Callback<DCGANBase>) {
+    constructor(modelPath: string, options: DCGANOptions = {}, callback?: ML5Callback<DCGANBase>) {
         this.modelReady = false;
         this.config = {
             returnTensors: options.returnTensors || false,
@@ -107,7 +107,7 @@ class DCGANBase {
      * @param {object} latentVector - an array containing the latent vector; otherwise use random vector
      * @return {object} a promise or the result of the callback function.
      */
-    public async generate(callback: Callback<GeneratedImageResult>, latentVector?: number[]): Promise<GeneratedImageResult> {
+    public async generate(callback: ML5Callback<GeneratedImageResult>, latentVector?: number[]): Promise<GeneratedImageResult> {
         await this.ready;
         return callCallback(this.generateInternal(latentVector), callback);
     }
@@ -126,7 +126,7 @@ class DCGANBase {
 
 }
 
-const DCGAN = (modelPath: string, optionsOrCb?: DCGANOptions | Callback<DCGANBase>, cb?: Callback<DCGANBase>) => {
+const DCGAN = (modelPath: string, optionsOrCb?: DCGANOptions | ML5Callback<DCGANBase>, cb?: ML5Callback<DCGANBase>) => {
     const {callback, options, string} = new ArgSeparator(modelPath, optionsOrCb, cb);
 
     if (! string) {

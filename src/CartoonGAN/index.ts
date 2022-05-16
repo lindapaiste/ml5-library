@@ -7,10 +7,10 @@
 */
 
 import * as tf from '@tensorflow/tfjs';
-import callCallback, {Callback} from '../utils/callcallback';
+import callCallback, {ML5Callback} from '../utils/callcallback';
 import {GeneratedImageResult, generatedImageResult} from "../utils/GeneratedImage";
 import {ArgSeparator} from "../utils/argSeparator";
-import {ImageArg, TfImageSource} from "../utils/imageUtilities";
+import handleArguments, { ImageArg, InputImage } from "../utils/handleArguments";
 import {toTensor} from "../utils/imageConversion";
 
 const IMAGE_SIZE = 256;
@@ -36,7 +36,7 @@ class Cartoon {
      * @param {CartoonOptions} options - Required. The name of pre-included model or the url path to your model.
      * @param {function} callback - Required. A function to run once the model has been loaded.
      */
-  constructor(options: CartoonOptions = {}, callback?: Callback<Cartoon>) {
+  constructor(options: CartoonOptions = {}, callback?: ML5Callback<Cartoon>) {
     this.config = {
       // TODO: lookup name against supported models
       modelUrl: options.modelUrl ? options.modelUrl : SUPPORTED_MODELS.miyazaki,
@@ -56,7 +56,7 @@ class Cartoon {
      * @param {HTMLImageElement | HTMLCanvasElement} inputOrCallback the source img you want to transfer.
      * @param {function} cb
      */
-  async generate(inputOrCallback: ImageArg | Callback<GeneratedImageResult>, cb: Callback<GeneratedImageResult>) {
+  async generate(inputOrCallback: ImageArg | ML5Callback<GeneratedImageResult>, cb: ML5Callback<GeneratedImageResult>) {
 
     const {image, callback} = ArgSeparator.from(inputOrCallback, cb)
         .require(
@@ -67,7 +67,7 @@ class Cartoon {
     return callCallback(this.generateInternal(image), callback);
   }
 
-  async generateInternal(src: TfImageSource) {
+  async generateInternal(src: InputImage) {
     await this.ready;
     await tf.nextFrame();
     // adds resizeBilinear to resize image to 256x256 as required by the model
@@ -97,8 +97,8 @@ class Cartoon {
   }
 } 
 
-const cartoon = (optionsOr: CartoonOptions | string | Callback<Cartoon>, cb?: Callback<Cartoon>) => {
-  const {string, options = {}, callback} = new ArgSeparator(optionsOr, cb);
+const cartoon = (optionsOr: CartoonOptions | string | ML5Callback<Cartoon>, cb?: ML5Callback<Cartoon>) => {
+  const {string, options = {}, callback} = handleArguments(optionsOr, cb);
   if ( string ) {
     options.modelUrl = string;
   }

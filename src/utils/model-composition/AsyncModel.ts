@@ -1,4 +1,4 @@
-import callCallback, {Callback} from "../callcallback";
+import callCallback, {Ml5Callback} from "../callcallback";
 import {EventEmitter} from "events";
 
 
@@ -37,7 +37,7 @@ export abstract class AsyncModel<Model, Options> extends EventEmitter {
 
     abstract defaultConfig(): Options;
 
-    protected callWhenReady<A extends any[], T>(innerMethod: (this: Ready<this>, ...args: A) => Promise<T>, callback: Callback<T> | undefined, eventName: string, ...args: A) {
+    protected callWhenReady<A extends any[], T>(innerMethod: (this: Ready<this>, ...args: A) => Promise<T>, callback: Ml5Callback<T> | undefined, eventName: string, ...args: A) {
         return callCallback((async () => {
             const ready = await this.ready;
             const result = await innerMethod.call(ready, ...args);
@@ -57,7 +57,7 @@ export abstract class AsyncModel<Model, Options> extends EventEmitter {
 export const constructWithCallback = <Model, Options, Instance extends AsyncModel<Model, Options>>(
     constructor: new (options?: Options) => Instance,
     options?: Options,
-    callback?: Callback<Ready<Instance>>
+    callback?: Ml5Callback<Ready<Instance>>
 ) => {
     const instance = new constructor(options);
     if (callback) {

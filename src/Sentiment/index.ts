@@ -1,6 +1,6 @@
 import * as tf from '@tensorflow/tfjs';
 import {LayersModel} from '@tensorflow/tfjs';
-import callCallback, {Callback} from '../utils/callcallback';
+import callCallback, {ML5Callback} from '../utils/callcallback';
 import modelLoader from '../utils/modelLoader';
 import {loadFile} from "../utils/io";
 
@@ -138,7 +138,7 @@ const loadSentimentModel = async (modelName: string): Promise<SentimentModel> =>
  * @param {function} [callback] - Optional. A callback function that is called once the model has loaded.
  * If no callback is provided, it will return a promise that will be resolved once the model has loaded.
  */
-const sentiment = (modelName: string, callback: Callback<SentimentModel>): Promise<SentimentModel> =>
+const sentiment = (modelName: string, callback: ML5Callback<SentimentModel>): Promise<SentimentModel> =>
     callCallback(loadSentimentModel(modelName), callback);
 
 export default sentiment;

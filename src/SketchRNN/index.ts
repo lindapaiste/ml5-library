@@ -8,7 +8,7 @@ SketchRNN
 */
 
 import * as ms from '@magenta/sketch';
-import callCallback, {Callback} from '../utils/callcallback';
+import callCallback, {ML5Callback} from '../utils/callcallback';
 import modelPaths from './models';
 import {getModelPath} from '../utils/modelLoader';
 import {LSTMState} from "@magenta/sketch/es5/sketch_rnn/model";
@@ -77,7 +77,7 @@ class SketchRNN {
      * @param {function} callback - Optional. A callback function that is called once the model has loaded. If no callback is provided, it will return a promise
      *    that will be resolved once the model has loaded.
      */
-    constructor(model: string, options?: SketchRNNOptions, callback?: Callback<SketchRNN>) {
+    constructor(model: string, options?: SketchRNNOptions, callback?: ML5Callback<SketchRNN>) {
         this.config = {
             ...DEFAULTS,
             ...options
@@ -128,9 +128,9 @@ class SketchRNN {
      * @return {Promise<PenStroke>}
      */
     async generate(
-        optionsOrSeedOrCallback: PenStroke[] | SketchRNNOptions | Callback<PenStroke>,
-        optionsOrCallback: SketchRNNOptions | Callback<PenStroke>,
-        cb: Callback<PenStroke>,
+        optionsOrSeedOrCallback: PenStroke[] | SketchRNNOptions | ML5Callback<PenStroke>,
+        optionsOrCallback: SketchRNNOptions | ML5Callback<PenStroke>,
+        cb: ML5Callback<PenStroke>,
     ): Promise<PenStroke> {
         const {array: seedStrokes = [], options = {}, callback} = new ArgSeparator(optionsOrSeedOrCallback, optionsOrCallback, cb);
 
@@ -164,6 +164,6 @@ class SketchRNN {
  * @param {boolean} [large] // TODO: accept options object - this is a breaking change so I need to check that it's ok
  * @return {SketchRNN}
  */
-const sketchRNN = (model: string, callback: Callback<SketchRNN>, large = true) => new SketchRNN(model, {large}, callback);
+const sketchRNN = (model: string, callback: ML5Callback<SketchRNN>, large = true) => new SketchRNN(model, {large}, callback);
 
 export default sketchRNN;
