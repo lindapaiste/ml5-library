@@ -11,11 +11,121 @@ This version is heavily based on Christopher Hesse TensorFlow.js implementation:
 */
 
 import * as tf from '@tensorflow/tfjs';
-import CheckpointLoaderPix2pix from '../utils/checkpointLoaderPix2pix';
-import {
-  array3DToImage
-} from '../utils/imageUtilities';
 import callCallback from '../utils/callcallback';
+import CheckpointLoaderPix2pix from '../utils/checkpointLoaderPix2pix';
+import { array3DToImage } from '../utils/imageUtilities';
+
+// TODO: can this be written as a layersModel?
+class PictModel {
+  constructor(variables) {
+    /**
+     * @type {Record<string, tf.Tensor>}
+     */
+    this.variables = variables;
+    /**
+     * @type {tf.Tensor[]}
+     */
+    this.layers = [];
+    /**
+     * @type {number}
+     */
+    this.currentStep = 1;
+    /**
+     * @type {boolean}
+     */
+    this.isEncoding = true;
+  }
+
+  reset() {
+    this.layers = [];
+    this.currentStep = 1;
+    this.isEncoding = true;
+  }
+
+  getVariable(path) {
+    const scope = `${this.isEncoding ? 'encoder' : 'decoder'}_${this.currentStep}`;
+    const value = this.variables[`generator/${scope}/${path}`];
+    if (!value) {
+      console.error(`generator/${scope}/${path}`, Object.keys(this.variables));
+    }
+    return value;
+  }
+
+  maybeBatchNorm(input) {
+    if (this.currentStep <= 1) {
+      return input;
+    }
+    const scale = this.getVariable('batch_normalization/gamma');
+    const offset = this.getVariable('batch_normalization/beta');
+    return tf.tidy(() => {
+      // TODO: why are variables moving_mean and moving_variance not used?
+      const { mean, variance } = tf.moments(input, [0, 1]);
+      const varianceEpsilon = 1e-5;
+      return tf.batchNorm(input, mean, variance, offset, scale, varianceEpsilon);
+    });
+  }
+
+  encode() {
+    const filter = this.getVariable('conv2d/kernel');
+    // TODO: why isn't the bias used?
+    // const bias = this.getVariable('conv2d/bias');
+    const layerInput = this.layers[this.currentStep - 1];
+    return tf.tidy(() => {
+      // Apply leakyRelu, but not on the input.
+      const rectified = this.currentStep === 1 ? layerInput : tf.leakyRelu(layerInput, 0.2);
+      // Apply conv2d.
+      const convolved = tf.conv2d(rectified, filter, [2, 2], 'same');
+      // Apply batchNorm, but not on the first layer.
+      return this.maybeBatchNorm(convolved);
+    });
+  }
+
+  decode() {
+    return tf.tidy(() => {
+      const lastLayer = this.layers[this.layers.length - 1];
+      const skipLayer = this.layers[this.currentStep];
+      console.log(this.currentStep, this.layers.length);
+      const layerInput = this.currentStep === 8
+        ? lastLayer
+        : tf.concat([lastLayer, skipLayer], 2);
+      const rectified = tf.relu(layerInput);
+      const filter = this.getVariable('conv2d_transpose/kernel');
+      const bias = this.getVariable('conv2d_transpose/bias');
+      console.log('input', rectified.shape, 'filter', filter.shape)
+      const convolved = tf.conv2dTranspose(rectified, filter, [rectified.shape[0] * 2, rectified.shape[1] * 2, filter.shape[2]], [2, 2], 'same');
+      const biased = tf.add(convolved, bias);
+      return this.maybeBatchNorm(biased);
+    });
+  }
+
+  predict(preprocessedInput) {
+    this.reset();
+    this.layers[0] = preprocessedInput;
+    // Note: this assumes that there are always 8 layers. is that always true?
+    for (let i = 1; i <= 8; i += 1) {
+      this.currentStep = i;
+      this.layers[i] = this.encode();
+    }
+    this.isEncoding = false;
+    for (let i = 8; i >= 1; i -= 1) {
+      this.currentStep = i;
+      this.layers.push(this.decode());
+    }
+    const output = tf.tanh(this.layers[this.layers.length - 1]);
+    this.layers.forEach(layer => layer.dispose());
+    return output;
+  }
+
+  dispose() {
+    Object.values(this.variables).forEach(variable => variable.dispose());
+  }
+}
+
+const loadPictModel = async (path) => {
+  const checkpointLoader = new CheckpointLoaderPix2pix(path);
+  const variables = await checkpointLoader.getAllVariables();
+  return new PictModel(variables);
+}
 
 class Pix2pix {
   /**
@@ -26,138 +136,60 @@ class Pix2pix {
   constructor(model, callback) {
     /**
      * Boolean to check if the model has loaded
-     * @type {boolean}
+     * @type {Promise<Pix2pix>}
      * @public
      */
-    this.ready = callCallback(this.loadCheckpoints(model), callback);
+    this.ready = callCallback(this.load(model), callback);
   }
 
-  async loadCheckpoints(path) {
-    const checkpointLoader = new CheckpointLoaderPix2pix(path);
-    this.variables = await checkpointLoader.getAllVariables();
+  async load(path) {
+    /**
+     * @type {PictModel}
+     */
+    this.model = await loadPictModel(path);
     return this;
   }
 
   /**
    * Given an canvas element, applies image-to-image translation using the provided model. Returns an image.
-   * @param {HTMLCanvasElement} inputElement 
+   * @param {HTMLCanvasElement} inputElement
    * @param {function} cb - A function to run once the model has made the transfer. If no callback is provided, it will return a promise that will be resolved once the model has made the transfer.
    */
   async transfer(inputElement, cb) {
     return callCallback(this.transferInternal(inputElement), cb);
   }
 
+  // TODO: return multi-format result using generatedImageResult.
   async transferInternal(inputElement) {
-    
+    await this.ready;
     const result = array3DToImage(tf.tidy(() => {
-      const input = tf.browser.fromPixels(inputElement);
-      const inputData = input.dataSync();
-      const floatInput = tf.tensor3d(inputData, input.shape);
-      const normalizedInput = tf.div(floatInput, tf.scalar(255));
-      const preprocessedInput = Pix2pix.preprocess(normalizedInput);
-      
-      const layers = [];
-      let filter = this.variables['generator/encoder_1/conv2d/kernel'];
-      let bias = this.variables['generator/encoder_1/conv2d/bias'];
-      let convolved = Pix2pix.conv2d(preprocessedInput, filter, bias);
-      layers.push(convolved);
-
-      for (let i = 2; i <= 8; i += 1) {
-        const scope = `generator/encoder_${i.toString()}`;
-        filter = this.variables[`${scope}/conv2d/kernel`];
-        const bias2 = this.variables[`${scope}/conv2d/bias`];
-        const layerInput = layers[layers.length - 1];
-        const rectified = tf.leakyRelu(layerInput, 0.2);
-        convolved = Pix2pix.conv2d(rectified, filter, bias2);
-        const scale = this.variables[`${scope}/batch_normalization/gamma`];
-        const offset = this.variables[`${scope}/batch_normalization/beta`];
-        const normalized = Pix2pix.batchnorm(convolved, scale, offset);
-        layers.push(normalized);
-      }
-
-      for (let i = 8; i >= 2; i -= 1) {
-        let layerInput;
-        if (i === 8) {
-          layerInput = layers[layers.length - 1];
-        } else {
-          const skipLayer = i - 1;
-          layerInput = tf.concat([layers[layers.length - 1], layers[skipLayer]], 2);
-        }
-        const rectified = tf.relu(layerInput);
-        const scope = `generator/decoder_${i.toString()}`;
-        filter = this.variables[`${scope}/conv2d_transpose/kernel`];
-        bias = this.variables[`${scope}/conv2d_transpose/bias`];
-        convolved = Pix2pix.deconv2d(rectified, filter, bias);
-        const scale = this.variables[`${scope}/batch_normalization/gamma`];
-        const offset = this.variables[`${scope}/batch_normalization/beta`];
-        const normalized = Pix2pix.batchnorm(convolved, scale, offset);
-        layers.push(normalized);
-      }
-
-      const layerInput = tf.concat([layers[layers.length - 1], layers[0]], 2);
-      let rectified2 = tf.relu(layerInput);
-      filter = this.variables['generator/decoder_1/conv2d_transpose/kernel'];
-      const bias3 = this.variables['generator/decoder_1/conv2d_transpose/bias'];
-      convolved = Pix2pix.deconv2d(rectified2, filter, bias3);
-      rectified2 = tf.tanh(convolved);
-      layers.push(rectified2);
-
-      const output = layers[layers.length - 1];
-      const deprocessedOutput = Pix2pix.deprocess(output);
-
-      return deprocessedOutput;
+      const preprocessedInput = Pix2pix.preprocess(inputElement);
+      const output = this.model.predict(preprocessedInput);
+      return Pix2pix.deprocess(output);
     }));
-
     await tf.nextFrame();
     return result;
   }
 
-  static preprocess(inputPreproc) {
-    const result = tf.tidy(() => {
-      return tf.sub(tf.mul(inputPreproc, tf.scalar(2)), tf.scalar(1));
+  static preprocess(inputElement) {
+    return tf.tidy(() => {
+      const input = tf.browser.fromPixels(inputElement);
+      // Convert from int [0,255] to float [0,1]
+      const floatInput = tf.div(tf.cast(input, 'float32'), tf.scalar(255));
+      // Convert to range [-1,1]
+      return tf.sub(tf.mul(floatInput, tf.scalar(2)), tf.scalar(1));
     });
-    inputPreproc.dispose();
-    return result;
   }
 
   static deprocess(inputDeproc) {
-    const result = tf.tidy(() => {
+    return tf.tidy(() => {
+      // Convert from [-1,1] back to [0,1]
       return tf.div(tf.add(inputDeproc, tf.scalar(1)), tf.scalar(2));
     });
-    inputDeproc.dispose();
-    return result;
   }
 
-  static batchnorm(inputBat, scale, offset) {
-    const result = tf.tidy(() => {
-      const moments = tf.moments(inputBat, [0, 1]);
-      const varianceEpsilon = 1e-5;
-      return tf.batchNorm(inputBat, moments.mean, moments.variance, offset, scale, varianceEpsilon);
-    });
-    inputBat.dispose();
-    return result;
-  }
-
-  static conv2d(inputCon, filterCon) {
-    const tempFilter = filterCon.clone()
-    const result = tf.tidy(() => {
-      return tf.conv2d(inputCon, tempFilter, [2, 2], 'same');
-    });
-    inputCon.dispose();
-    tempFilter.dispose();
-    return result;
-  }
-
-  static deconv2d(inputDeconv, filterDeconv, biasDecon) {
-    const result = tf.tidy(() => {
-      const convolved = tf.conv2dTranspose(inputDeconv, filterDeconv, [inputDeconv.shape[0] * 2, inputDeconv.shape[1] * 2, filterDeconv.shape[2]], [2, 2], 'same');
-      const biased = tf.add(convolved, biasDecon);
-      return biased;
-    })
-    inputDeconv.dispose();
-    filterDeconv.dispose();
-    biasDecon.dispose();
-    return result;
+  dispose() {
+    this.model.dispose();
   }
 }
 
