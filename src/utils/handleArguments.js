@@ -1,4 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
+import { videoFromStream } from "./imageUtilities";
 /**
  * @typedef ImageElement
  * @type {HTMLImageElement | HTMLCanvasElement | HTMLVideoElement}
@@ -11,9 +12,9 @@ import * as tf from "@tensorflow/tfjs";
  */
 
 /**
- * ML5 models accept all TensorFlow image inputs as well as p5 images and videos.
+ * ML5 models accept all TensorFlow image inputs as well as p5 images and videos and media streams
  * @typedef ImageArg
- * @type {InputImage | p5.Image | p5.Video | p5.Element}
+ * @type {InputImage | p5.Image | p5.Video | p5.Element | MediaSource | MediaStream}
  */
 
 /**
@@ -25,6 +26,16 @@ export const isVideo = (img) => {
   // Must guard all instanceof checks on DOM elements in order to run in node.
   return typeof (HTMLVideoElement) !== 'undefined' &&
     img instanceof HTMLVideoElement;
+}
+
+/**
+ * Check if a variable is a MediaStream or other MediaSource
+ * @param {object} img
+ * @return {img is (MediaSource | MediaStream)}
+ */
+export const isStream = (img) => {
+  return (typeof (MediaStream) !== 'undefined' &&
+      img instanceof MediaStream) || ('sourceBuffers' in img);
 }
 
 /**
@@ -49,7 +60,7 @@ export const isImg = (img) => {
 
 /**
  * Check if a variable is a p5.Image or other p5.Element.
- * @param {p5.Element | p5.Image} img
+ * @param {p5.Element | p5.Image | CanvasImageSource} img
  * @returns {img is p5.Element | p5.Image}
  */
 export const isP5Image = (img) => {
@@ -203,6 +214,10 @@ class ArgHelper {
             });
           }
         }
+        // Handle webcam streams.
+        else if (isStream(arg)) {
+          this.set({ video: videoFromStream(arg) })
+        }
           // TODO: handle audio elements and p5.sound
         // Check for arrays
         else if (Array.isArray(arg)) {
@@ -232,7 +247,8 @@ class ArgHelper {
       if (warn && this.has(property)) {
         console.warn(
           `Received multiple ${property} arguments, but only a single ${property} is supported.
-          The last ${property} will be used.`
+          The last ${property} will be used.`,
+            this[property], values[property]
         );
       }
       this[property] = values[property];

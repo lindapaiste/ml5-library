@@ -24,6 +24,31 @@ const processVideo = (input, size, callback = () => {}) => {
   return element;
 };
 
+/**
+ * Convert a webcam or other stream into an HTMLVideoElement.
+ * This intermediate step is required in order to draw a stream to a canvas.
+ * Can optionally resize the video.
+ * @param {MediaProvider} stream
+ * @param {number} [width]
+ * @param {number} [height]
+ * @return {HTMLVideoElement}
+ */
+function videoFromStream(stream, width, height) {
+  const video = document.createElement('video');
+  video.srcObject = stream;
+  if (width) {
+    video.width = width;
+  }
+  if (height) {
+    video.height = height;
+  }
+  video.autoplay = true;
+  video.playsinline = true;
+  video.muted = true;
+  // const playPromise = video.play();
+  return video;
+}
+
 // Converts a tf to DOM img
 const array3DToImage = (tensor) => {
   const [imgHeight, imgWidth] = tensor.shape;
@@ -165,6 +190,7 @@ function imgToPixelArray(img) {
 export {
   array3DToImage,
   processVideo,
+  videoFromStream,
   cropImage,
   imgToTensor,
   isInstanceOfSupportedElement,
